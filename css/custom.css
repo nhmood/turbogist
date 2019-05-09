@@ -1,0 +1,81 @@
+@import url('https://rsms.me/inter/inter.css');
+body { font-family: 'Inter', sans-serif; }
+@supports (font-variation-settings: normal) {
+  html { font-family: 'Inter var', sans-serif; }
+}
+
+
+.container {
+  margin-bottom: 50px;
+}
+
+#header {
+  margin-top: 100px;
+  vertical-align: bottom;
+}
+#gists {
+  display: none;
+}
+
+#login {
+  display: none;
+}
+
+#access_token {
+  display: none;
+}
+
+#login_error {
+  display: none;
+}
+
+.error {
+  color: #D72638;
+}
+
+#login_msg {
+  font-size: 11px;
+  font-style: italic;
+}
+
+#actions {
+  margin-left: 10px;
+}
+
+#gist_list {
+  text-align: center;
+}
+
+#startup {
+  margin-top: 10%;
+  vertical-align: middle;
+  text-align: center;
+}
+
+#loaded {
+  display: none;
+}
+
+
+td.public {
+  text-align: center;
+}
+
+
+#gist_pagination {
+  margin: auto;
+  width: auto;
+  text-align: center;
+}
+
+#gist_pagination a {
+  margin-right: 10px;
+}
+
+.updated {
+  font-size: 10px;
+}
+
+.created {
+  font-size: 10px;
+}

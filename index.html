@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="utf-8">
+  <title>turbogist</title>
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+
+
+
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/skeleton.css">
+  <link rel="stylesheet" href="css/custom.css">
+
+  <link rel="icon" type="image/png" href="images/favicon.png">
+
+</head>
+<body>
+
+  <div class="container">
+    <div id="header" class="row">
+      <div class="one-half column">
+        <h3>turbo<strong>gist</strong></h3>
+      </div>
+    </div>
+
+
+    <div id="main">
+      <div id="login" class="row">
+        <div class="one-half column">
+          <p>
+            <a href="https://gist.github.com" target="_blank">GitHub Gists</a> are really great, but their UI could be a little better.
+            turbogist gives you a slightly improved interface to your gists.
+          </p>
+          <p>Just login with your credentials or provide a <a href="https://github.com/settings/tokens" target="_blank">GitHub Personal Access Token</a> to see your gists.</p>
+          <br>
+        </div>
+        <div class="one-half column">
+          login with <a href="#/" id="cred_link" onclick="return setLoginMode('credentials');">credentials</a> or
+          <a href="#" id="access_link" onclick="return setLoginMode('access_token');">personal access tokens</a><br>
+          <br>
+
+
+            <form onsubmit="return false;">
+              <div id="credentials">
+                <input id="gh_username" name="username" type="text"     placeholder="GitHub Login"></input>
+                <input id="gh_password" name="password" type="password" placeholder="Password"></input><br>
+              </div>
+              <div id="access_token">
+                <input id="gh_access_token" name="access_token" type="text" placeholder="GitHub Personal Token"></input>
+              </div>
+              <button id="login_button" onclick="ghLogin();" value="Login">Login</button> <i id="login_status" class=""></i>
+            </form>
+          </div>
+
+        </div>
+
+        <div id="gists" class="row">
+          <div class="row">
+            <div class="four columns">
+              hey there, <a id="gh_link" href="#/" target="_blank"></a>!<br><br>
+
+              <div id="actions">
+                <i class="fas fa-angle-right"></i> <a href="#/update"    onclick="return updateGists();">update gists</a><br>
+                <i class="fas fa-angle-right"></i> <a href="#/refresh"   onclick="return getAllGists();">refresh all gists</a><br>
+                <i class="fas fa-angle-right"></i> <a href="#/logout"    onclick="return logout();">logout</a>
+              </div>
+            </div>
+
+
+            <div id="content" class="eight columns">
+              <div id="startup">
+                <i class="fas fa-spinner fa-spin fa-4x"></i>
+              </div>
+
+              <div id="loaded">
+                <table class="u-full-width">
+                  <thead>
+                    <tr>
+                      <td><a href="#update" onclick="return updateGists();"><i id="refresh_loading" class="fas fa-sync-alt"></i></a> Name</td>
+                      <td>Actions</td>
+                    </tr>
+                  </thead>
+
+                  <tbody id="gist_list">
+                  </tbody>
+                </table>
+                <div id="gist_pagination"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> <!-- main -->
+
+</body>
+<script src="js/turbogist.js"></script>
+</html>
