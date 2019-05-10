@@ -460,7 +460,7 @@ function renderGists(page){
     // Gist Actions
     var actions = document.createElement("td");
     var gistEdit = '<a href="' + getGistEditLink(gist) + '" target="_blank" title="Edit Gist"><i class="fas fa-edit"></i></a> ';
-    var gistDelete = '<a href="#/gists/' + gist.id + '/delete" onclick="deleteGist(\'' + gist.id + '\');"><i class="far fa-trash-alt"></i></a>';
+    var gistDelete = '<a href="#/gists/' + gist.id + '/delete" onclick="deleteGist(\'' + gist.id + '\' );" title="Delete Gist"><i class="far fa-trash-alt"></i></a>';
 
     actions.innerHTML = gistEdit + gistDelete;
     el.appendChild(actions);
