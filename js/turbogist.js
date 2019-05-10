@@ -158,10 +158,11 @@ function ghLogin(){
 
   // If we are in demo mode, set necessary local values, perform gist retrieval, and setup
   if (isDemo){
+    console.log("In demo mode, set local data accordingly and render");
     localStorage.setItem("turbogist_auth", 'demo');
     localStorage.setItem("turbogist_user", JSON.stringify({"login": "demo", "html_url": "https://gist.github.com"}));
-    getAllGists();
-    setup();
+
+    handleAuthSuccess();
     return true;
   }
 
