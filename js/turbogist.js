@@ -254,7 +254,8 @@ function getUser(){
 
   return fetch(GH_USER_URL, {
     method: "GET",
-    headers: headers
+    headers: headers,
+    cache: "no-cache"
   })
   .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json() })
   .then(  d => { console.log(d); localStorage.setItem("turbogist_user", JSON.stringify(d)) })
@@ -375,7 +376,8 @@ function getGists(url, page){
 
   return fetch(pageURL, {
     method: "GET",
-    headers: headers
+    headers: headers,
+    cache: "no-cache"
   })
   .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json(); })
   .then(  d => { storeGists( d ); page == 1 ? renderGists(0) : false; if (isDemo && (page > 4)){ return true }; return (d.length != 0) ? getGists(url, page + 1) : true; })
@@ -478,7 +480,8 @@ function getGist(gist){
 
   return fetch(pageURL, {
     method: "GET",
-    headers: headers
+    headers: headers,
+    cache: "no-cache"
   })
   .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json(); })
   .then(  d => { storeGist( d ); return true; })
