@@ -1,12 +1,12 @@
 console.log("turbogist v1.0");
 const GH_URL = "https://api.github.com";
-const GH_AUTH_URL = GH_URL + "/authorizations";
 const GH_USER_URL = GH_URL + "/user";
 const GH_GIST_URL = GH_URL + "/gists";
 const GH_PAGINATION = 10;
 
 
-var loginMode = "credentials";
+
+const TG = {};
 var isDemo = false;
 var isLoggedIn = false;
 var currentPage = 0;
@@ -20,10 +20,54 @@ var gistData = Object.assign({}, gistDataFormat);
 
 
 
-function setup(){
-  isDemo      = localStorage.getItem("turbogist_auth") == "demo";
-  isLoggedIn  = localStorage.getItem("turbogist_auth") != undefined;
+async function setup(){
+  await handleAuthInit();
+
+  // Check whether we are in demo mode or not
+  let isDemoMode = checkDemoMode();
+  if (isDemoMode){
+    return demoMode();
+  }
+
+  isLoggedIn  = localStorage.getItem("tgAccessToken") != undefined;
   isLoggedIn  ? setupGist() : setupLogin();
+}
+
+async function handleAuthInit(){
+  // Check for existence of the tgAuthInit localStorage entry
+  // If this isn't set, then we don't need to initialize turbogist
+  let authData = localStorage.getItem("tgAuthInit");
+  if (authData == undefined){ return false; }
+
+  // Parse the authData and depending on the state handle success/failure
+  let auth = JSON.parse(authData);
+  if (auth.state != "ok"){
+    console.error(`GitHub User Authorization failed -> ${auth}`);
+    return handleAuthFailure();
+  }
+
+  // If the auth was successful, store the access token then initialize turbogist
+  localStorage.setItem("tgAccessToken", auth.access_token);
+  await getUser();
+  await getAllGists();
+}
+
+
+function handleAuthFailure(data){
+  let el = document.getElementById("login_error");
+  el.style.display = "block";
+  localStorage.removeItem("tgAuthInit");
+}
+
+
+
+
+function checkDemoMode(){
+  return document.location.hash.match(/#demo/) != undefined;
+}
+
+function demoMode(){
+  console.log("DEMO MODE");
 }
 
 
@@ -39,8 +83,10 @@ function setupLogin(){
 }
 
 
-function setupGist(){
-  setGistBackend();
+async function setupGist(){
+  await getUser();
+  loadGistCache();
+  await updateGists();
   setGistUI();
 }
 
@@ -53,15 +99,10 @@ function toggleUI(state){
   }
 }
 
-
 function setLoginUI(){
   toggleUI("login");
 }
 
-
-function setGistBackend(){
-  loadGistCache();
-}
 
 
 function setGistUI(){
@@ -70,8 +111,9 @@ function setGistUI(){
   // Set the GitHub User link
   var user = JSON.parse( localStorage.getItem("turbogist_user") );
   var gh_link = document.getElementById("gh_link");
-  gh_link.href = "https://gist.github.com/" + user.login;
-  gh_link.innerHTML = user.login;
+  console.log(TG);
+  gh_link.href = "https://gist.github.com/" + TG.user.login;
+  gh_link.innerHTML = TG.user.login;
 
 
   // Swap out the starting loading page
@@ -87,201 +129,29 @@ function setGistUI(){
 }
 
 
-function setLoginMode(e){
-  // Based on what element got selected, set the appropriate
-  // div as visible and the corresponding loginMode
-  var credentials = document.getElementById("credentials");
-  var access_tokens = document.getElementById("access_token");
-  if (e == "access_token"){
-    credentials.style.display   = "none";
-    access_tokens.style.display = "block";
-    loginMode = "access_token";
-  } else {
-    credentials.style.display   = "block";
-    access_tokens.style.display = "none";
-    loginMode = "credentials";
-  }
-}
-
-
-function checkInputs(){
-  // Check the user inputs to make sure we have a valid login mode
-  var login = document.getElementById( loginMode );
-  inputs = login.querySelectorAll("input");
-  for (var i = 0; i < inputs.length; i++){
-
-    // If any of the values are set to "demo", update demo flag and skip this check
-    // Sorry to whoever has demo@github
-    if (inputs[i].value == "demo"){
-      console.log("Demo account provided, skip input checks");
-      isDemo = true;
-      return true
-    }
-
-    // Make sure inputs are not blank
-    var data = inputs[i].value.replace(/\s+/g,"");
-    if (data.length == 0){
-      return false;
-    }
-  }
-  return true;
-}
-
-
-// UI handler for login state spinner
-function setLoginStatus(state){
-  var loginStatus = document.getElementById("login_status");
-  switch(state){
-    case "pending":
-      loginStatus.className = "fas fa-spinner fa-spin";
-      break;
-    case "error":
-      loginStatus.className = "fas fa-times-circle error";
-      break;
-    case "none":
-      loginStatus.className = "";
-      break;
-  }
-  return true;
-}
-
-
-// Top level login function that delegates based on the loginMode
-function ghLogin(){
-  // Check to make sure the user has provided us with useable inputs
-  var validInputs = checkInputs();
-  if (!validInputs) {
-    setLoginStatus("error");
-    return false;
-  }
-
-
-  // If we are in demo mode, set necessary local values, perform gist retrieval, and setup
-  if (isDemo){
-    console.log("In demo mode, set local data accordingly and render");
-    localStorage.setItem("turbogist_auth", 'demo');
-    localStorage.setItem("turbogist_user", JSON.stringify({"login": "demo", "html_url": "https://gist.github.com"}));
-
-    handleAuthSuccess();
-    return true;
-  }
-
-
-  // Based on the login mode, call the corresponding login method
-  // ghLoginCredentials - performs actual login to get token against /authorizations
-  // ghLoginAccessToken - returns provided token in same format as above
-  var access = (function(){
-    switch(loginMode){
-      case "credentials":
-        return ghLoginCredentials();
-      case "access_token":
-        return ghLoginAccessToken();
-    };
-  })()
-  // Handle an auth failure (bad auth will give !200)
-  .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json() })
-
-  // Store the auth data, attempt to use the token to get the user data
-  .then(  d => { storeAuth( d ); return getUser(); })
-
-  // getUser() will determine status of if auth was successful or not, handle accordingly
-  .then(  d => { handleAuthSuccess(); })
-  .catch( e => { handleAuthFailure( e ); });
-}
-
-
-function ghLoginAccessToken(){
-  console.log("Logging in with token mode");
-  setLoginStatus("pending");
-
-  var token = document.getElementById("gh_access_token").value;
-  console.debug("Using token" + token + " for token login");
-
-
-  // Return a Promise with "ok" and "json()" fields so we can match
-  // the same syntax as a fetch call to ghLogin()
-  var p = new Promise(function(resolve, reject){
-    var obj = {"ok": true, "json": function(e){ return {"token": token} }};
-    resolve(obj);
-  })
-
-  return p;
-}
-
-
-function ghLoginCredentials(){
-  console.log("Logging in with credential mode");
-  setLoginStatus("pending");
-
-  // Create the basic auth headers for retrieving access tokens from GH
-  var headers = ghCreateBasicAuth();
-
-
-  // Set the necessary parameters for retrieving a token from GH
-  var data = {
-    scopes: ["gist"],
-    note: "turbogist",
-    fingerprint: Math.random().toString(36).substring(7)
-  }
-
-	return fetch(GH_AUTH_URL, {
-		method: "POST",
-		headers: headers,
-    body: JSON.stringify( data )
-	})
-}
-
-
-function ghCreateBasicAuth(){
-	console.log("Creating Basic Auth header for credential login");
-	var username = document.getElementById("gh_username").value;
-	var password = document.getElementById("gh_password").value;
-	console.log("Username: " + username);
-	console.log("Password: " + password);
-
-
-  var ghBasicAuth = "Basic " + btoa(username + ":" + password);
-	var headers = new Headers();
-	headers.set('Authorization', ghBasicAuth);
-  console.log("GitHub Authentication Header: " + ghBasicAuth);
-
-  return headers;
-}
-
-
-function getUser(){
+async function getUser(force = false){
   console.log("Getting User information from " + GH_USER_URL);
+  if (!force && TG.user){ console.log("User Data already set"); return; }
   var headers = ghSetTokenHdr();
 
-  return fetch(GH_USER_URL, {
+  let data = await request(GH_USER_URL, {
     method: "GET",
     headers: headers,
     cache: "no-cache"
   })
-  .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json() })
-  .then(  d => { console.log(d); localStorage.setItem("turbogist_user", JSON.stringify(d)) })
-  .catch( e => { throw Error("getUser failed"); })
+  .catch(e => { throw Error(`getUser Failed ${e}`) });
+  console.log(data);
+
+  localStorage.setItem("tgUser", JSON.stringify(data));
+  TG.user = data;
 }
 
+async function request(path, opts){
+  let response = await fetch(path, opts);
+  if (!response.ok){ throw Error(response.statusText) };
+  let payload = await response.json();
 
-function handleAuthFailure( d ){
-  console.log("Handling failed auth event");
-  localStorage.removeItem("turbogist_auth");
-  setLoginStatus("error");
-}
-
-
-function handleAuthSuccess( d ) {
-  console.log("Handling successful auth event");
-  setLoginStatus("none");
-
-  var login = document.getElementById( loginMode );
-  inputs = login.querySelectorAll("input");
-  for (var i = 0; i < inputs.length; i++){
-    var data = inputs[i].value = "";
-  }
-  setup();
-  getAllGists();
+  return payload;
 }
 
 
@@ -297,16 +167,14 @@ function ghSetTokenHdr(){
   // If demo, skip the headers
   if (isDemo){ console.log(isDemo); return new Headers() };
 
-  var token_data = localStorage.getItem("turbogist_auth");
-  if (token_data === null){
+  var token = localStorage.getItem("tgAccessToken");
+  if (token === null){
     console.log("GitHub tokens are broken");
     return false;
   }
 
-  var token = JSON.parse(token_data);
-	var headers = new Headers();
-	headers.set('Authorization', "token " + token.token);
-  console.log(headers);
+  var headers = new Headers();
+  headers.set('Authorization', "token " + token);
 
   return headers;
 }
@@ -323,10 +191,10 @@ function clearGists(){
 }
 
 
-function getAllGists(){
+async function getAllGists(){
   resetSince();
   clearGists();
-  updateGists();
+  await updateGists();
 }
 
 
@@ -358,7 +226,7 @@ function updateGists(){
   var since = new Date(localStorage.getItem("turbogist_since"));
   var url = GH_GIST_URL + "?since=" + since.toISOString();
 
-  getGists(url, 1).then( e => {
+  return getGists(url, 1).then( e => {
     console.log("All pages parsed for getAllGists(), updating getGistInProgress and turbogist_since");
     var currentTime = new Date();
     localStorage.setItem("turbogist_since", currentTime);

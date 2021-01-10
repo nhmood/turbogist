@@ -4,7 +4,6 @@ body { font-family: 'Inter', sans-serif; }
   html { font-family: 'Inter var', sans-serif; }
 }
 
-
 .container {
   margin-bottom: 50px;
 }
@@ -19,6 +18,11 @@ body { font-family: 'Inter', sans-serif; }
 
 #login {
   display: none;
+}
+
+#mode {
+  text-align: center;
+  vertical-align: center;
 }
 
 #access_token {
@@ -36,6 +40,10 @@ body { font-family: 'Inter', sans-serif; }
 #login_msg {
   font-size: 11px;
   font-style: italic;
+}
+
+#login_error {
+  display: none;
 }
 
 #actions {

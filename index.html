@@ -36,30 +36,26 @@
         <div class="one-half column">
           <p>
             <a href="https://gist.github.com" target="_blank">GitHub Gists</a> are really great, but their UI could be a little better.
-            turbogist gives you a slightly improved interface to your gists.
+            turbogist gives you a <em>slightly</em> improved interface to your gists.
           </p>
-          <p>Just login with your credentials or provide a <a href="https://github.com/settings/tokens" target="_blank">GitHub Personal Access Token</a> to see your gists.</p>
+          <p>Login with your GitHub account or try a demo with public Gists</p>
           <br>
         </div>
-        <div class="one-half column">
-          login with <a href="#/" id="cred_link" onclick="return setLoginMode('credentials');">credentials</a> or
-          <a href="#" id="access_link" onclick="return setLoginMode('access_token');">personal access tokens</a><br>
-          <br>
+        <div id="mode" class="one-half column">
+          <p id="login_error">Something went wrong <i class="far fa-frown-open"></i>, try again</p>
+          <button>
+            <a href="https://github.com/login/oauth/authorize?client_id=116a4ae451e2451c0e0f&scope=gist,read:user">
+              Sign in with GitHub <i class="fab fa-github"></i>
+            </a>
+          </button>
 
+          <button>
+            <a href="#demo">Demo Mode</a>
+          </button>
 
-            <form onsubmit="return false;">
-              <div id="credentials">
-                <input id="gh_username" name="username" type="text"     placeholder="GitHub Login"></input>
-                <input id="gh_password" name="password" type="password" placeholder="Password"></input><br>
-              </div>
-              <div id="access_token">
-                <input id="gh_access_token" name="access_token" type="text" placeholder="GitHub Personal Token"></input>
-              </div>
-              <button id="login_button" onclick="ghLogin();" value="Login">Login</button> <i id="login_status" class=""></i>
-            </form>
-          </div>
 
         </div>
+      </div>
 
         <div id="gists" class="row">
           <div class="row">
