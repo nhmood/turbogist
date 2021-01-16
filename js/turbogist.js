@@ -1,27 +1,26 @@
 console.log("turbogist v1.0");
-const GH_URL = "https://api.github.com";
-const GH_USER_URL = GH_URL + "/user";
-const GH_GIST_URL = GH_URL + "/gists";
+const GITHUB_BASE_URL = "https://api.github.com";
+const GH_USER_URL = GITHUB_BASE_URL + "/user";
+const GH_GIST_URL = GITHUB_BASE_URL + "/gists";
 const GH_PAGINATION = 10;
 
 
 
-const TG = {};
+const TG = {
+  'getGistInProgress': false
+};
 var isDemo = false;
-var isLoggedIn = false;
-var currentPage = 0;
-var getGistInProgress = false;
 
 const gistDataFormat = {
   "rawData": [],
   "pages": []
 }
-var gistData = Object.assign({}, gistDataFormat);
-
 
 
 async function setup(){
   await handleAuthInit();
+
+  setNav("");
 
   // Check whether we are in demo mode or not
   let isDemoMode = checkDemoMode();
@@ -36,31 +35,27 @@ async function setup(){
 async function handleAuthInit(){
   // Check for existence of the tgAuthInit localStorage entry
   // If this isn't set, then we don't need to initialize turbogist
+  // Make sure to remove the tgAuthInit so we don't rerun through
+  // the auth again
   let authData = localStorage.getItem("tgAuthInit");
+  localStorage.removeItem("tgAuthInit");
+
   if (authData == undefined){ return false; }
 
   // Parse the authData and depending on the state handle success/failure
   let auth = JSON.parse(authData);
   if (auth.state != "ok"){
     console.error(`GitHub User Authorization failed -> ${auth}`);
-    return handleAuthFailure();
+    show("login_error");
   }
 
   // If the auth was successful, store the access token then initialize turbogist
   localStorage.setItem("tgAccessToken", auth.access_token);
-  await getUser();
-  await getAllGists();
+  TG.access_token = auth.access_token;
+
+  clearGists();
+  // TODO - add initial loading spinner div
 }
-
-
-function handleAuthFailure(data){
-  let el = document.getElementById("login_error");
-  el.style.display = "block";
-  localStorage.removeItem("tgAuthInit");
-}
-
-
-
 
 function checkDemoMode(){
   return document.location.hash.match(/#demo/) != undefined;
@@ -71,23 +66,35 @@ function demoMode(){
 }
 
 
-function logout(){
+function resetGists(){
+  clearGists();
+  setup();
+}
+
+function resetDB(){
   clearGists();
   localStorage.clear();
+  Object.keys(TG).forEach(f => { TG[f] = undefined })
+  setup();
+}
+
+
+function logout(){
+  resetDB();
   setup();
 }
 
 
 function setupLogin(){
-  setLoginUI();
+  enableLoginUI();
 }
 
 
 async function setupGist(){
   await getUser();
-  loadGistCache();
+  initFromCache();
+  enableGistUI();
   await updateGists();
-  setGistUI();
 }
 
 
@@ -99,35 +106,31 @@ function toggleUI(state){
   }
 }
 
-function setLoginUI(){
+
+function enableLoginUI(){
   toggleUI("login");
 }
 
 
-
-function setGistUI(){
+function enableGistUI(){
   toggleUI("gists");
-
-  // Set the GitHub User link
-  var user = JSON.parse( localStorage.getItem("turbogist_user") );
-  var gh_link = document.getElementById("gh_link");
-  console.log(TG);
-  gh_link.href = "https://gist.github.com/" + TG.user.login;
-  gh_link.innerHTML = TG.user.login;
-
-
-  // Swap out the starting loading page
-  var holding = document.getElementById("startup");
-  holding.style.display = "none";
-  var content = document.getElementById("loaded");
-  content.style.display = "block";
-
 
   // Update the pagination and render the first page
   updatePagination();
   renderGists(0);
 }
 
+
+function setDB(key, value){
+  TG[key] = value;
+
+  let lsKey = getLSKey(key);
+  localStorage.setItem(lsKey, JSON.stringify(value));
+}
+
+function getLSKey(key){
+  return `tg${capitalize(key)}`;
+}
 
 async function getUser(force = false){
   console.log("Getting User information from " + GH_USER_URL);
@@ -142,9 +145,25 @@ async function getUser(force = false){
   .catch(e => { throw Error(`getUser Failed ${e}`) });
   console.log(data);
 
-  localStorage.setItem("tgUser", JSON.stringify(data));
-  TG.user = data;
+  setDB("user", data);
+  setUserUI();
 }
+
+
+function setUserUI(){
+  // Set the GitHub User link
+  var gh_link = document.getElementById("gh_link");
+  gh_link.href = "https://gist.github.com/" + TG.user.login;
+  gh_link.innerHTML = TG.user.login;
+
+
+  // Swap out the starting loading page
+  var holding = document.getElementById("startup");
+  holding.style.display = "none";
+  var content = document.getElementById("loaded");
+  content.style.display = "block";
+}
+
 
 async function request(path, opts){
   let response = await fetch(path, opts);
@@ -152,14 +171,6 @@ async function request(path, opts){
   let payload = await response.json();
 
   return payload;
-}
-
-
-function storeAuth(data){
-  console.log("Storing GH Auth to localStorage");
-  localStorage.setItem("turbogist_auth", JSON.stringify(data)) ;
-  localStorage.setItem("turbogist_since", 0);
-  return true;
 }
 
 
@@ -180,21 +191,9 @@ function ghSetTokenHdr(){
 }
 
 
-function resetSince(){
-  localStorage.setItem("turbogist_since", 0);
-}
-
-
 function clearGists(){
-  localStorage.removeItem("turbogist_gistdata");
-  gistData = Object.assign({}, gistDataFormat);
-}
-
-
-async function getAllGists(){
-  resetSince();
-  clearGists();
-  await updateGists();
+  setDB("since", 0);
+  setDB("gists", Object.assign({}, gistDataFormat));
 }
 
 
@@ -212,28 +211,28 @@ function refreshState(state){
       break;
   }
 
-  getGistInProgress = false;
+  TG.getGistInProgress = false;
   return true;
 }
 
 
 function updateGists(){
-  if (getGistInProgress){ console.log("getAllGist already in progress"); return false };
-  getGistInProgress = true;
+  if (TG.getGistInProgress){ console.log("getAllGist already in progress"); return false };
+  TG.getGistInProgress = true;
 
   refreshState("pending");
 
-  var since = new Date(localStorage.getItem("turbogist_since"));
+  var since = new Date(TG.since);
   var url = GH_GIST_URL + "?since=" + since.toISOString();
 
   return getGists(url, 1).then( e => {
-    console.log("All pages parsed for getAllGists(), updating getGistInProgress and turbogist_since");
+    console.log("All pages parsed for getAllGists(), updating getGistInProgress and tgSince");
     var currentTime = new Date();
-    localStorage.setItem("turbogist_since", currentTime);
+    setDB("since", currentTime);
     cacheGists();
     refreshState("none");
   })
-  .catch( e => { refreshState("error"); })
+  .catch( e => { console.log(e); refreshState("error"); })
 }
 
 
@@ -255,7 +254,7 @@ function getGists(url, page){
 
 
 function sortGistData(data){
-  data.sort(function(a, b){ return new Date(b.updated_at) - new Date(a.updated_at)})
+  return data.sort(function(a, b){ return new Date(b.updated_at) - new Date(a.updated_at)})
 };
 
 
@@ -264,9 +263,9 @@ function storeGists(data){
 
   // Concatenate the newly loaded data to the existing local container,
   // sort it, and finally store it back locally
-  var rawData = data.concat(gistData.rawData);
-  sortGistData(gistData.rawData);
-  gistData.rawData = rawData;
+  var rawData = data.concat(TG.gists.rawData);
+  sortedData = sortGistData(rawData);
+  TG.gists.rawData = sortedData;
 
   updatePagination();
 }
@@ -282,7 +281,7 @@ function updatePagination(){
   var pagination = document.getElementById("gist_pagination");
   pagination.innerHTML = "";
 
-  for (var i = 0; i < gistData.rawData.length / GH_PAGINATION; i++){
+  for (var i = 0; i < TG.gists.rawData.length / GH_PAGINATION; i++){
     var link = document.createElement("a");
     link.href = "#/page/" + (i + 1);
     link.onclick = createPaginationLink(i);
@@ -301,7 +300,7 @@ function renderGists(page){
   // Determine the start and end range and slice out of gistData.rawData
   var start = page * GH_PAGINATION;
   var end   = start + GH_PAGINATION;
-  var gists = gistData.rawData.slice(start, end);
+  var gists = TG.gists.rawData.slice(start, end);
 
 
   // Go through all the gists and render a row
@@ -388,22 +387,60 @@ function getGistEditLink(gist){
 
 
 function cacheGists(){
-  // Sort gist data then store into localStorage
-  sortGistData(gistData.rawData);
-  localStorage.setItem("turbogist_gistdata", JSON.stringify(gistData));
+  setDB("gists", TG.gists);
 }
 
 
-// Load gist data from localStorage
-function loadGistCache(){
-  console.log("Attempting to load gistData from localStorage cache");
-  var cacheData = localStorage.getItem("turbogist_gistdata");
-  if (cacheData == undefined){
-    console.log("gistData was not stored in localStorage!");
-    return false
+function initFromCache(){
+  loadCache("since");
+  loadCache("gists");
+}
+
+
+function loadCache(key){
+  let lsKey = getLSKey(key);
+  console.log(`Attempting to load ${key} from localStorage cache`);
+  let entry = localStorage.getItem(lsKey);
+  if (entry == undefined){
+    console.error(`${key} / ${lsKey} not stored in localStorage!`);
+    return false;
   }
-  gistData = JSON.parse(cacheData);
+
+  // Attempt to parse the entry as JSON if applicable
+  let data = entry;
+  try { data = JSON.parse(entry); } catch {}
+  TG[key] = data;
 }
+
+
+// String capitalize
+function capitalize(string){
+  return string[0].toUpperCase() + string.slice(1);
+}
+
+
+// Helper to show a div (by ID)
+function show(id){
+  let el = document.getElementById(id);
+  if (el == undefined){ return; }
+  el.style.display = "block";
+}
+
+
+// Helper to hide a div (by ID)
+function hide(id){
+  let el = document.getElementById(id);
+  if (el == undefined){ return; }
+  el.style.display = "none";
+}
+
+
+// Helper to set the URL nav path
+function setNav(page){
+  window.location.hash = `#/${page}`;
+}
+
+
 
 
 // Friendly time
@@ -447,6 +484,8 @@ function fuzzyTime(time){
 
   return fuzzy;
 }
+
+
 
 
 document.addEventListener("DOMContentLoaded", function() { setup() });
