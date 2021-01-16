@@ -57,38 +57,37 @@
         </div>
       </div>
 
-        <div id="gists" class="row">
-          <div class="row">
-            <div class="four columns">
-              hey there, <a id="gh_link" href="#/" target="_blank"></a>!<br><br>
+      <div id="gists" class="row">
+        <div class="row">
+          <div class="four columns">
+            hey there, <a id="gh_link" href="#/" target="_blank"></a>!<br><br>
 
-              <div id="actions">
-                <i class="fas fa-angle-right"></i> <a href="#/update"    onclick="return updateGists();">update gists</a><br>
-                <i class="fas fa-angle-right"></i> <a href="#/refresh"   onclick="return getAllGists();">refresh all gists</a><br>
-                <i class="fas fa-angle-right"></i> <a href="#/logout"    onclick="return logout();">logout</a>
-              </div>
+            <div id="actions">
+              <i class="fas fa-angle-right"></i> <a href="#/update"    onclick="return updateGists();">update gists</a><br>
+              <i class="fas fa-angle-right"></i> <a href="#/refresh"   onclick="return resetGists();">refresh all gists</a><br>
+              <i class="fas fa-angle-right"></i> <a href="#/logout"    onclick="return logout();">logout</a>
+            </div>
+          </div>
+
+
+          <div id="content" class="eight columns">
+            <div id="startup">
+              <i class="fas fa-spinner fa-spin fa-4x"></i>
             </div>
 
+            <div id="loaded">
+              <table class="u-full-width">
+                <thead>
+                  <tr>
+                    <td><a href="#update" onclick="return updateGists();"><i id="refresh_loading" class="fas fa-sync-alt"></i></a> Name</td>
+                    <td>Actions</td>
+                  </tr>
+                </thead>
 
-            <div id="content" class="eight columns">
-              <div id="startup">
-                <i class="fas fa-spinner fa-spin fa-4x"></i>
-              </div>
-
-              <div id="loaded">
-                <table class="u-full-width">
-                  <thead>
-                    <tr>
-                      <td><a href="#update" onclick="return updateGists();"><i id="refresh_loading" class="fas fa-sync-alt"></i></a> Name</td>
-                      <td>Actions</td>
-                    </tr>
-                  </thead>
-
-                  <tbody id="gist_list">
-                  </tbody>
-                </table>
-                <div id="gist_pagination"></div>
-              </div>
+                <tbody id="gist_list">
+                </tbody>
+              </table>
+              <div id="gist_pagination"></div>
             </div>
           </div>
         </div>
