@@ -216,6 +216,61 @@ function refreshState(state){
 }
 
 
+
+async function getGistsSince(sinceDate = 0){
+  const since = new Date(sinceDate);
+  const url   = GH_GIST_URL + "?since=" + since.toISOString();
+
+  await getGists(url);
+
+  var currentTime = new Date();
+  setDB("since", currentTime);
+  cacheGists();
+  refreshState("none");
+}
+
+
+function getGists(pageURL, page = 1){
+  const url = pageURL + "&page=" + page;
+
+  // Make the request to grab Gist data by since+page
+  return fetchGistPage(url).then( data => {
+    // Store off the data and if we are on the first page, render it
+    storeGists(data.gists);
+    if (page == 1){ renderGists(0) };
+
+    // If there is more data available, recursively call
+    // the getGists page again with the next page
+    // On return, concatenate the current page data with the next page data
+    // so we can inspect/use _all_ gist records from the set of requests
+    if (data.moreAvailable){
+      page += 1;
+      return getGists(pageURL, page).then( more => {
+        return data.gists.concat(more)
+      })
+    } else {
+      console.log("No more gist data found");
+      return data
+    }
+  })
+  .catch( e => {console.log(`Failed to get gists for ${url} -> ${e}`)});
+}
+
+
+function fetchGistPage(pageURL){
+  const headers = ghSetTokenHdr();
+  return fetch(pageURL, {
+    method: "GET",
+    headers: headers,
+    cache: "no-cache"
+  })
+  .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json(); })
+  // Format the gist data into an object that has the data + moreAvailable indicator
+  .then(  d => { return {gists: d, moreAvailable: (d.length > 0)} })
+  .catch( e => { console.log(`Failed to fetch page ${pageURL} -> ${e}`) ;})
+}
+
+
 function updateGists(){
   if (TG.getGistInProgress){ console.log("getAllGist already in progress"); return false };
   TG.getGistInProgress = true;
@@ -225,32 +280,10 @@ function updateGists(){
   var since = new Date(TG.since);
   var url = GH_GIST_URL + "?since=" + since.toISOString();
 
-  return getGists(url, 1).then( e => {
-    console.log("All pages parsed for getAllGists(), updating getGistInProgress and tgSince");
-    var currentTime = new Date();
-    setDB("since", currentTime);
-    cacheGists();
-    refreshState("none");
-  })
-  .catch( e => { console.log(e); refreshState("error"); })
+  getGistsSince(since)
 }
 
 
-function getGists(url, page){
-  var headers = ghSetTokenHdr();
-  var pageURL = url + "&page=" + page;
-  console.log("getGists->" + pageURL);
-
-
-  return fetch(pageURL, {
-    method: "GET",
-    headers: headers,
-    cache: "no-cache"
-  })
-  .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json(); })
-  .then(  d => { storeGists( d ); page == 1 ? renderGists(0) : false; if (isDemo && (page > 4)){ return true }; return (d.length != 0) ? getGists(url, page + 1) : true; })
-  .catch( e => { console.log(e); throw Error("getGist failed - " + e); })
-}
 
 
 function sortGistData(data){
