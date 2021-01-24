@@ -383,6 +383,10 @@ function fetchGist(gistID){
 
 function storeGists(data){
   console.log("Storing Gist data locally");
+  if (data.length > 0){
+    idbStoreGists(data);
+  }
+
 
   // Concatenate the newly loaded data to the existing local container,
   // sort it, and finally store it back locally
