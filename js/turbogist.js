@@ -402,13 +402,22 @@ function createPaginationLink(page) {
   return function() { renderGists(page); };
 }
 
+async function idbCountGists(transaction){
+  const session = transaction || idbGenerateTransaction(["gists"], "readonly");
+  let request = session.stores.gists.count();
+  return new Promise((resolve, reject) => {
+    request.onsuccess = (event) => { resolve(event.target.result) };
+    request.onerror   = (event) => { reject(event.target.result)  };
+  })
+}
 
-function updatePagination(){
+async function updatePagination(){
   // Grab and clear the current pagination
   var pagination = document.getElementById("gist_pagination");
   pagination.innerHTML = "";
 
-  for (var i = 0; i < TG.gists.rawData.length / GH_PAGINATION; i++){
+  let gistCount = await idbCountGists();
+  for (var i = 0; i < gistCount / GH_PAGINATION; i++){
     var link = document.createElement("a");
     link.href = "#/page/" + (i + 1);
     link.onclick = createPaginationLink(i);
