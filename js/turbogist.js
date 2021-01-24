@@ -16,6 +16,40 @@ const gistDataFormat = {
   "pages": []
 }
 
+var db;
+
+function setupDB(){
+  return new Promise((resolve, reject) => {
+    console.log(`Setting up indexedDB`);
+    var request = window.indexedDB.open("turbogist", 1);
+
+    request.onerror = function(event){
+      console.log("indexedDB error setup");
+      console.log(event);
+      reject(event);
+    }
+
+    request.onsuccess = function(event){
+      console.log("indexedDB successful set");
+      db = event.target.result;
+      resolve(db);
+    }
+
+    request.onupgradeneeded = function(event){
+      console.log("indexedDB upgrade needed");
+
+      db = event.target.result;
+
+      var gistStore = db.createObjectStore("gists", {autoIncrement: true});
+      gistStore.createIndex("id", "id", {unique: true});
+      gistStore.createIndex("public", "public", { unique: false });
+      gistStore.createIndex("created_at", "created_at", { unique: false });
+    }
+  });
+}
+
+
+
 
 async function setup(){
   await handleAuthInit();
@@ -27,6 +61,8 @@ async function setup(){
   if (isDemoMode){
     return demoMode();
   }
+
+  db = await setupDB();
 
   isLoggedIn  = localStorage.getItem("tgAccessToken") != undefined;
   isLoggedIn  ? setupGist() : setupLogin();
@@ -289,6 +325,49 @@ function updateGists(){
 function sortGistData(data){
   return data.sort(function(a, b){ return new Date(b.updated_at) - new Date(a.updated_at)})
 };
+
+//let storeMap = new Map(stores.map(s => [s, transaction.objectStore(s)]));
+function idbGenerateTransaction(stores, mode){
+  const transaction = db.transaction(stores, mode);
+  const storeMap = stores.reduce((map, store) => {
+    map[store] = transaction.objectStore(store);
+    return map;
+  }, {});
+
+  return {
+    transaction: transaction,
+    stores: storeMap
+  }
+}
+
+async function idbGetGistKey(id, transaction){
+  const session = transaction || idbGenerateTransaction(["gists"], "read");
+  const index = session.stores.gists.index("id");
+  const request = index.getKey(id);
+
+  return new Promise((resolve, reject) => {
+    request.onsuccess = (event) => { resolve(event.target.result) };
+    request.onerror   = (event) => { reject(event.target.result)  };
+  })
+}
+
+async function idbStoreGist(gist, transaction){
+  const session = transaction || idbGenerateTransaction(["gists"], "readwrite");
+  const key = await idbGetGistKey(gist.id, session);
+
+  const request = session.stores.gists.put(gist, key);
+  return new Promise((resolve, reject) => {
+    request.onsuccess = (event) => resolve(event);
+    request.onerror   = (event) => reject(event);
+  });
+}
+
+function idbStoreGists(gists){
+  const session = idbGenerateTransaction(["gists"], "readwrite");
+  const stores = gists.map(gist => { return idbStoreGist(gist, session) });
+  return Promise.all(stores)
+}
+
 
 
 function storeGists(data){
