@@ -293,17 +293,23 @@ function getGists(pageURL, page = 1){
 }
 
 
-function fetchGistPage(pageURL){
+function githubFetch(pageURL){
   const headers = ghSetTokenHdr();
   return fetch(pageURL, {
     method: "GET",
     headers: headers,
-    cache: "no-cache"
+    cache: "no-cache",
+    accept: "application/vnd.github.v3+json"
   })
   .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json(); })
+  .catch( e => { console.log(`Failed to fetch page ${pageURL} -> ${e}`) ;})
+}
+
+
+function fetchGistPage(pageURL){
+  return githubFetch(pageURL)
   // Format the gist data into an object that has the data + moreAvailable indicator
   .then(  d => { return {gists: d, moreAvailable: (d.length > 0)} })
-  .catch( e => { console.log(`Failed to fetch page ${pageURL} -> ${e}`) ;})
 }
 
 
@@ -368,6 +374,11 @@ function idbStoreGists(gists){
   return Promise.all(stores)
 }
 
+
+function fetchGist(gistID){
+  let url = GH_GIST_URL + "/" + gistID;
+  return githubFetch(url)
+}
 
 
 function storeGists(data){
@@ -458,14 +469,8 @@ function getGist(gist){
   console.log("getGist->" + pageURL);
 
 
-  return fetch(pageURL, {
-    method: "GET",
-    headers: headers,
-    cache: "no-cache"
-  })
-  .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json(); })
+  return githubFetch(pageURL)
   .then(  d => { storeGist( d ); return true; })
-  .catch( e => { console.log(e); throw Error("getGist failed - " + e); })
 }
 
 // Delete individual Gist by id
