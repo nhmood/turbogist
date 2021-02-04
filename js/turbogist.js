@@ -411,13 +411,62 @@ async function idbCountGists(transaction){
   })
 }
 
+
+async function idbGetPageBounds(pageSize, transaction){
+  // Create or use the provided session and pull the "updated_at" index
+  const session = transaction || idbGenerateTransaction(["gists"], "readonly");
+  const index = session.stores.gists.index("updated_at");
+
+  // Open a key cursor in the reverse direction (latest updated first)
+  // and create a container for the page bounds
+  const request = index.openKeyCursor(null, "prev");
+  const pageBounds = [];
+
+  // Wrap the cursor in a Promise for easy handling
+  const walk = new Promise((resolve, reject) => {
+    // On success will be fired whenever the cursor moves
+    request.onsuccess = (event) => {
+      // Pull the result out of the event to get the Gist (ID)
+      // If the cursor result has data, then we found a record and
+      // we should add it to the list and keep paging
+      let cursor = event.target.result;
+      if (cursor != undefined){
+        pageBounds.push(cursor.primaryKey);
+        cursor.advance(pageSize);
+
+      // If the cursor does not find any data, we should resolve
+      // this promise with the events we have collected so far
+      } else {
+        resolve(pageBounds);
+      }
+    }
+
+    // Handle any errors on the cursor
+    request.onerror = (event) => {
+      console.log(event)
+    }
+  });
+
+
+  // Wait on the promise to complete (finish paging)
+  // and return the events we have collected
+  await walk;
+  return pageBounds;
+}
+
+
 async function updatePagination(){
   // Grab and clear the current pagination
   var pagination = document.getElementById("gist_pagination");
   pagination.innerHTML = "";
 
-  let gistCount = await idbCountGists();
-  for (var i = 0; i < gistCount / GH_PAGINATION; i++){
+  // Loop through all available gists in indexedDB and break out the
+  // lower/upper bounds for each page based on the GH_PAGINATION value
+  // TODO - feels like there is a more efficient way of keeping track of
+  //        page bounds by id...
+  TG.pageBounds = await idbGetPageBounds(GH_PAGINATION);
+
+  for (let i = 0; i < TG.pageBounds.length; i++){
     var link = document.createElement("a");
     link.href = "#/page/" + (i + 1);
     link.onclick = createPaginationLink(i);
