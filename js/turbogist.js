@@ -40,7 +40,7 @@ function setupDB(){
 
       db = event.target.result;
 
-      var gistStore = db.createObjectStore("gists", {autoIncrement: true});
+      var gistStore = db.createObjectStore("gists", {autoIncrement: false, keyPath: "id"});
       gistStore.createIndex("id", "id", {unique: true});
       gistStore.createIndex("public", "public", { unique: false });
       gistStore.createIndex("created_at", "created_at", { unique: false });
@@ -359,6 +359,8 @@ async function idbGetGistKey(id, transaction){
 
 async function idbStoreGist(gist, transaction){
   const session = transaction || idbGenerateTransaction(["gists"], "readwrite");
+
+  // TODO - this is no longer necessary as we moved away from autoIncrement PKs
   const key = await idbGetGistKey(gist.id, session);
 
   const request = session.stores.gists.put(gist, key);
