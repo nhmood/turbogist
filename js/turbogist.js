@@ -41,9 +41,9 @@ function setupDB(){
       db = event.target.result;
 
       var gistStore = db.createObjectStore("gists", {autoIncrement: false, keyPath: "id"});
-      gistStore.createIndex("id", "id", {unique: true});
-      gistStore.createIndex("public", "public", { unique: false });
       gistStore.createIndex("created_at", "created_at", { unique: false });
+      gistStore.createIndex("updated_at", "updated_at", { unique: false });
+      gistStore.createIndex("public", "public", { unique: false });
     }
   });
 }
@@ -347,9 +347,9 @@ function idbGenerateTransaction(stores, mode){
 }
 
 async function idbGetGistKey(id, transaction){
-  const session = transaction || idbGenerateTransaction(["gists"], "read");
-  const index = session.stores.gists.index("id");
-  const request = index.getKey(id);
+  const session = transaction || idbGenerateTransaction(["gists"], "readonly");
+  const gists = session.stores.gists;
+  const request = gists.getKey(id);
 
   return new Promise((resolve, reject) => {
     request.onsuccess = (event) => { resolve(event.target.result) };
@@ -359,11 +359,9 @@ async function idbGetGistKey(id, transaction){
 
 async function idbStoreGist(gist, transaction){
   const session = transaction || idbGenerateTransaction(["gists"], "readwrite");
+  const gists = session.stores.gists;
 
-  // TODO - this is no longer necessary as we moved away from autoIncrement PKs
-  const key = await idbGetGistKey(gist.id, session);
-
-  const request = session.stores.gists.put(gist, key);
+  const request = gists.put(gist);
   return new Promise((resolve, reject) => {
     request.onsuccess = (event) => resolve(event);
     request.onerror   = (event) => reject(event);
