@@ -346,10 +346,10 @@ function idbGenerateTransaction(stores, mode){
   }
 }
 
-async function idbGetGistKey(id, transaction){
+async function idbGetGist(id, transaction){
   const session = transaction || idbGenerateTransaction(["gists"], "readonly");
   const gists = session.stores.gists;
-  const request = gists.getKey(id);
+  const request = gists.get(id);
 
   return new Promise((resolve, reject) => {
     request.onsuccess = (event) => { resolve(event.target.result) };
