@@ -319,7 +319,7 @@ function updateGists(){
 
   refreshState("pending");
 
-  var since = new Date(TG.since);
+  var since = new Date(TG.since || 0);
   var url = GH_GIST_URL + "?since=" + since.toISOString();
 
   getGistsSince(since)
