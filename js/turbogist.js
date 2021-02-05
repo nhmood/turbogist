@@ -148,11 +148,11 @@ function enableLoginUI(){
 }
 
 
-function enableGistUI(){
+async function enableGistUI(){
   toggleUI("gists");
 
   // Update the pagination and render the first page
-  updatePagination();
+  await updatePagination();
   renderGists(0);
 }
 
@@ -431,7 +431,7 @@ async function idbGetPageBounds(pageSize, transaction){
       // we should add it to the list and keep paging
       let cursor = event.target.result;
       if (cursor != undefined){
-        pageBounds.push(cursor.primaryKey);
+        pageBounds.push(cursor.key);
         cursor.advance(pageSize);
 
       // If the cursor does not find any data, we should resolve
@@ -476,17 +476,56 @@ async function updatePagination(){
 }
 
 
-function renderGists(page){
-  console.log("Rendering page: " + page);
+async function idbGetGistPage(start, pageSize, transaction){
+  // Create or use the provided session and pull the "updated_at" index
+  const session = transaction || idbGenerateTransaction(["gists"], "readonly");
+  const index = session.stores.gists.index("updated_at");
+
+  // Open a key cursor in the reverse direction (latest updated first)
+  // and create a container for the page bounds
+  const request = index.openCursor(IDBKeyRange.upperBound(start), "prev");
+  const gists = [];
+
+  // Wrap the cursor in a Promise for easy handling
+  const walk = new Promise((resolve, reject) => {
+    // On success will be fired whenever the cursor moves
+    request.onsuccess = (event) => {
+      // Pull the result out of the event to get the Gist (ID)
+      // If the cursor result has data, then we found a record and
+      // we should add it to the list and keep paging
+      let cursor = event.target.result;
+      if (cursor != undefined && gists.length < pageSize){
+        gists.push(cursor.value);
+        cursor.continue();
+
+      // If the cursor does not find any data, we should resolve
+      // this promise with the events we have collected so far
+      } else {
+        resolve(gists);
+      }
+    }
+
+    // Handle any errors on the cursor
+    request.onerror = (event) => {
+      console.log(event)
+    }
+  });
+
+
+  // Wait on the promise to complete (finish paging)
+  // and return the events we have collected
+  await walk;
+  return gists;
+}
+
+
+async function renderGists(page){
   var table = document.getElementById("gist_list");
   // Should I use ChildNode.replaceWith()?
   table.innerHTML = "";
 
-  // Determine the start and end range and slice out of gistData.rawData
-  var start = page * GH_PAGINATION;
-  var end   = start + GH_PAGINATION;
-  var gists = TG.gists.rawData.slice(start, end);
-
+  var gistPage = TG.pageBounds[page];
+  var gists = await idbGetGistPage(gistPage, GH_PAGINATION);
 
   // Go through all the gists and render a row
   for (var i = 0; i < gists.length; i++){
