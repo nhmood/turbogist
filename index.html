@@ -63,9 +63,9 @@
             hey there, <a id="gh_link" href="#/" target="_blank"></a>!<br><br>
 
             <div id="actions">
-              <i class="fas fa-angle-right"></i> <a href="#/update"    onclick="return updateGists();">update gists</a><br>
-              <i class="fas fa-angle-right"></i> <a href="#/refresh"   onclick="return resetGists();">refresh all gists</a><br>
-              <i class="fas fa-angle-right"></i> <a href="#/logout"    onclick="return logout();">logout</a>
+              <i class="fas fa-angle-right"></i> <a data-hook="updateGists" href="#/update">update gists</a><br>
+              <i class="fas fa-angle-right"></i> <a data-hook="resetGists"  href="#/refresh">refresh all gists</a><br>
+              <i class="fas fa-angle-right"></i> <a data-hook="logout"      href="#/logout">logout</a>
             </div>
           </div>
 
@@ -79,7 +79,7 @@
               <table class="u-full-width">
                 <thead>
                   <tr>
-                    <td><a href="#update" onclick="return updateGists();"><i id="refresh_loading" class="fas fa-sync-alt"></i></a> Name</td>
+                    <td><a data-hook="updateGists" href="#update"><i id="refresh_loading" class="fas fa-sync-alt"></i></a> Name</td>
                     <td>Actions</td>
                   </tr>
                 </thead>
@@ -95,5 +95,8 @@
     </div> <!-- main -->
 
 </body>
-<script src="js/turbogist.js"></script>
+<script type="module">
+  import {tg} from "./js/turbogist.js";
+  window.tg = tg;
+</script>
 </html>
