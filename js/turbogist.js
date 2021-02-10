@@ -52,6 +52,7 @@ class turbogist {
     isLoggedIn  ? this.#setupGist() : this.#setupLogin();
   }
 
+
   async #setupGist(){
     this.#user = await this.#gh.getUser();
 
@@ -66,31 +67,6 @@ class turbogist {
     await this.updateGists();
   }
 
-
-  async #enableGistUI(){
-    UI.toggleUI("gists");
-
-    if (this.#since != 0){
-      // Update the pagination and render the first page
-      await this.#updatePagination();
-      await this.renderGists(0);
-    }
-  }
-
-  async #updatePagination(){
-    const pageBounds = await this.#db.getPageBounds(UI.paginationSize);
-    UI.updatePagination(pageBounds);
-    return true;
-  }
-
-  async renderGists(page){
-    const gistPage = this.#db.pageBounds[page];
-    const gists = await this.#db.getGistPage(gistPage, UI.paginationSize);
-
-    UI.renderGists(gists);
-
-    return true;
-  }
 
 
   async updateGists(){
@@ -111,6 +87,41 @@ class turbogist {
 
     UI.refreshState("none");
     this.#getGistInProgress = false;
+
+
+    // TODO - move this to background/service worker
+    this.updateDictionary()
+  }
+
+
+
+  async #enableGistUI(){
+    UI.toggleUI("gists");
+
+    // If we already have available data (since is set), update the
+    // pagination and render the first page
+    if (this.#since != 0){
+      await this.#updatePagination();
+      await this.renderGists(0);
+    }
+  }
+
+
+
+  async #updatePagination(){
+    const pageBounds = await this.#db.getPageBounds(UI.paginationSize);
+    UI.updatePagination(pageBounds);
+    return true;
+  }
+
+  async renderGists(page){
+    const gistPage = this.#db.pageBounds[page];
+    if (gistPage == undefined){ return };
+    const gists = await this.#db.getGistPage(gistPage, UI.paginationSize);
+
+    UI.renderGists(gists);
+
+    return true;
   }
 
 
