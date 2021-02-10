@@ -62,6 +62,14 @@ class GitHub {
     .then(  d => { return {gists: d, moreAvailable: (d.length > 0)} })
   }
 
+
+  getGist(gistID){
+    console.log(`Fetching individual Gist:${gistID}`);
+    let url = GitHub.GIST_URL + "/" + gistID;
+    return this.#githubFetch(url);
+  }
+
+
   #githubFetch(pageURL){
     return fetch(pageURL, {
       method: "GET",
@@ -80,8 +88,6 @@ class GitHub {
 
     return payload;
   }
-
-
 }
 
 export { GitHub }
