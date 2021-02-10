@@ -47,6 +47,10 @@ class Database {
     gistStore.createIndex("updated_at", "updated_at", { unique: false });
     gistStore.createIndex("downloaded_at", "downloaded_at", { unique: false });
     gistStore.createIndex("pending", "pending", { unique: false });
+
+
+    const searchStore = idb.createObjectStore("dictionary", {autoIncrement: true, keyPath: "stem"});
+    searchStore.createIndex("id", "id", { unique: false });
   }
 
   deleteDB(){
@@ -198,6 +202,75 @@ class Database {
       request.onsuccess = (event) => resolve(event);
       request.onerror   = (event) => reject(event);
     });
+  }
+
+  async addStems(id, name, stems, transaction){
+    const session = transaction || this.#idbGenerateTransaction(["dictionary"], "readwrite");
+    const dictionary = session.stores.dictionary;
+
+    stems = Array.from(stems);
+    for (let i = 0; i < stems.length; i++){
+      let entry = {id: id, name: name, stem: stems[i]};
+      await this.addStem(entry);
+    }
+  }
+
+  async addStem(stem, transaction){
+    const session = transaction || this.#idbGenerateTransaction(["dictionary"], "readwrite");
+    const dictionary = session.stores.dictionary;
+
+    const request = dictionary.put(stem)
+    return new Promise((resolve, reject) => {
+      request.onsuccess = (event) => resolve(event);
+      request.onerror   = (event) => reject(event);
+    });
+  }
+
+  async searchStem(substr, transaction){
+    const session = transaction || this.#idbGenerateTransaction(["dictionary"], "readwrite");
+    const dictionary = session.stores.dictionary;
+
+    // For the search, we will use the substr as the lower bound and set the key range
+    // all the way to the next starting character
+    //const nextStarting = String.fromCharCode(substr.charCodeAt(0) + 1);
+    const nextStarting = substr + "z";// String.fromCharCode(substr.charCodeAt(0) + 1);
+    const keyRange = IDBKeyRange.bound(substr, nextStarting)
+
+    // Open a cursor and walk through all the entries that we find
+    // TODO - we may need to paginate these results
+    const request = dictionary.openCursor(keyRange)
+    const gists = [];
+
+    // Wrap the cursor in a Promise for easy handling
+    const walk = new Promise((resolve, reject) => {
+      // On success will be fired whenever the cursor moves
+      request.onsuccess = (event) => {
+        // Pull the result out of the event to get the Gist (ID)
+        // If the cursor result has data, then we found a record and
+        // we should add it to the list and keep paging
+        let cursor = event.target.result;
+        if (cursor != undefined){
+          gists.push(cursor.value);
+          cursor.continue();
+
+        // If the cursor does not find any data, we should resolve
+        // this promise with the events we have collected so far
+        } else {
+          resolve(gists);
+        }
+      }
+
+      // Handle any errors on the cursor
+      request.onerror = (event) => {
+        console.log(event)
+      }
+    });
+
+
+    // Wait on the promise to complete (finish paging)
+    // and return the events we have collected
+    await walk;
+    return gists;
   }
 
 

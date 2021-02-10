@@ -1,3 +1,13 @@
+// Strip out any nonletter/number characters, split by spaces,
+// remove any empty strings, downcase
+export function stemContent(content){
+  let replaced = content.replace(/[^A-Za-z0-9]/g, ' ');
+  let words = replaced.split(" ");
+  let filtered = words.filter(e => { return e.length != 0});
+  let stemmed = filtered.map(e => {return e.toLowerCase()});
+  return stemmed;
+}
+
 // String capitalize
 export function capitalize(string){
   return string[0].toUpperCase() + string.slice(1);
