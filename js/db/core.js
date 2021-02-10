@@ -3,7 +3,7 @@ class Database {
   #dbName = "turbogist";
   #idb;
 
-  pageBounds;
+  pageBounds = [];
 
   constructor(){
     console.log("Setting up turbogist indexedDB");
@@ -178,14 +178,20 @@ class Database {
 
   storeGists(gists){
     const session = this.#idbGenerateTransaction(["gists"], "readwrite");
-    const stores = gists.map(gist => { return this.#storeGist(gist, session) });
+    const stores = gists.map(gist => {
+      // When we batch import gists (with storeGists, compared to storeGist)
+      // set the pending flag to the current timestamp
+      gist.pending = new Date();
+      return this.storeGist(gist, session)
+    });
     return Promise.all(stores)
   }
 
 
-  async #storeGist(gist, transaction){
+  storeGist(gist, transaction){
     const session = transaction || this.#idbGenerateTransaction(["gists"], "readwrite");
     const gists = session.stores.gists;
+
 
     const request = gists.put(gist);
     return new Promise((resolve, reject) => {
