@@ -37,25 +37,30 @@ class Database {
     console.log("indexedDB database upgrade required");
     const db = event.target.result;
 
-    const gistStore = db.createObjectStore("gists", {autoIncrement: false, keyPath: "id"});
-    gistStore.createIndex("created_at", "created_at", { unique: false });
-    gistStore.createIndex("updated_at", "updated_at", { unique: false });
+    Database.createDB(db);
   }
 
-  #createDB(){
-    const gistStore = this.#idb.createObjectStore("gists", {autoIncrement: false, keyPath: "id"});
+  static createDB(idb){
+    idb = idb || this.#idb;
+    const gistStore = idb.createObjectStore("gists", {autoIncrement: false, keyPath: "id"});
     gistStore.createIndex("created_at", "created_at", { unique: false });
     gistStore.createIndex("updated_at", "updated_at", { unique: false });
+    gistStore.createIndex("downloaded_at", "downloaded_at", { unique: false });
+    gistStore.createIndex("pending", "pending", { unique: false });
   }
 
   deleteDB(){
-    const session = this.#idbGenerateTransaction(["gists"], "readwrite");
-    let gists = session.stores.gists;
-    let request = gists.clear();
-    return new Promise((resolve, reject) => {
-      request.onsuccess = (event) => resolve(event);
-      request.onerror   = (event) => reject(event);
-    });
+    try {
+      const session = this.#idbGenerateTransaction(["gists"], "readwrite");
+      let gists = session.stores.gists;
+      let request = gists.clear();
+      return new Promise((resolve, reject) => {
+        request.onsuccess = (event) => resolve(event);
+        request.onerror   = (event) => reject(event);
+      });
+    } catch(e) {
+      console.error(e);
+    }
   }
 
 
