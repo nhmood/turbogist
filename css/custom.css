@@ -87,3 +87,103 @@ td.public {
 .created {
   font-size: 10px;
 }
+
+
+
+
+#dictionary_loading {
+  font-size: 10px;
+  animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}
+
+
+
+
+
+
+a {
+  display: var(--rLinkDisplay, inline-flex) !important;
+}
+
+a[href] {
+  color: var(--rLinkColor) !important;
+  text-decoration: var(--rLinkTextDecoration, none) !important;
+}
+
+a {
+    /*
+        1. I use pixels units because others units (em, rem, vw, vh, etc) can
+        lead to the mistake of displaying a circumcised line
+    */
+
+    --uiTextUnderlinedLineHeight: var(--textUnderlinedLineHeight, 2px); /* 1 */
+    --uiTextUnderlinedLineGap: var(--textUnderlinedLineGap, .5rem);
+    --uiTextUnderlinedPaddingBottom: calc(var(--uiTextUnderlinedLineHeight) + var(--uiTextUnderlinedLineGap));
+
+    padding-bottom: var(--uiTextUnderlinedPaddingBottom) !important;
+    position: var(--textUnderlinedPosition, relative) !important;
+    z-index: var(--textUnderlinedZindex, 1) !important;
+}
+
+a::after{
+    content: "";
+    width: var(--textUnderlinedLineWidht, 100%) !important;
+    height: var(--uiTextUnderlinedLineHeight) !important;
+    background-image: var(--textUnderlinedBackgroundImage, linear-gradient(to top, var(--textUnderlinedLineColor, currentColor) 30%, rgba(0, 0, 0, 0) 45%)) !important;
+
+    position: absolute;
+    left: var(--textUnderlinedLineLeft, 0) !important;
+    bottom: var(--textUnderlinedLineBottom, 0) !important;
+    z-index: var(--textUnderlinedLineZindex, -1) !important;
+}
+
+/*
+=====
+CORE
+=====
+*/
+
+a{
+  --textUnderlinedLineHeight: 100%;
+  --textUnderlinedLineGap: 0;
+  --textUnderlinedLineColor: #fed330;
+
+  padding-left: .75rem;
+  padding-right: .75rem;
+}
+
+a::after{
+  will-change: width;
+  transition: width .1s ease-out;
+  transform: rotate(-2deg);
+  transform-origin: left bottom;
+}
+
+a:hover{
+  --textUnderlinedLineWidht: 0;
+}
+
+a:hover::after{
+  transition-duration: .15s;
+}
+
+/*
+* These styles for text decoration. The demo will be work without it
+*/
+
+a{
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+a:focus{
+  outline: 2px solid #fed330;
+  outline-offset: .5rem;
+}
+
