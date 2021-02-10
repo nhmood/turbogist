@@ -201,6 +201,64 @@ class Database {
   }
 
 
+  async getGist(id, transaction){
+    const session = transaction || this.#idbGenerateTransaction(["gists"], "readonly");
+    const gists = session.stores.gists;
+    const request = gists.get(id);
+
+    return new Promise((resolve, reject) => {
+      request.onsuccess = (event) => { resolve(event.target.result) };
+      request.onerror   = (event) => { reject(event.target.result)  };
+    })
+  }
+
+  async walkGists(index, gistDo){
+    const session = this.#idbGenerateTransaction(["gists"], "readwrite");
+    let source = session.stores.gists;
+
+    if (index){
+      source = source.index(index);
+    }
+
+    // Open a cursor on the gists
+    const request = source.openCursor();
+
+    // Wrap the cursor in a Promise for easy handling
+    const walk = new Promise((resolve, reject) => {
+      // On success will be fired whenever the cursor moves
+      request.onsuccess = async (event) => {
+        // Pull the result out of the event to get the Gist (ID)
+        // If the cursor result has data, then we found a record and
+        // we should add it to the list and keep paging
+        let cursor = event.target.result;
+        if (cursor != undefined){
+          // TODO - do we want to throw an await in here, if so we need to handle
+          //        the cursor transaction expiring
+          gistDo(event.target.result.value);
+          cursor.continue()
+
+        // If the cursor does not find any data, we should resolve
+        // this promise with the events we have collected so far
+        } else {
+          resolve();
+        }
+      }
+
+      // Handle any errors on the cursor
+      request.onerror = (event) => {
+        console.log(event)
+      }
+    });
+
+
+    // Wait on the promise to complete (finish paging)
+    // and return the events we have collected
+    await walk;
+  }
+
+
+
+
 }
 
 export { Database }
