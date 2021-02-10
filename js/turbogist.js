@@ -149,6 +149,36 @@ class turbogist {
   }
 
 
+  async updateDictionary(e){
+    // Walk through all gists in DB and fetch the
+    // full gist if the download_at is unset or older than
+    // the updated at of the gist
+    this.#db.walkGists("pending", async gist => {
+      console.log(gist);
+      if (gist.downloaded_at == undefined){
+        console.log(`gist:${gist.id} not downloaded`);
+        let data = await this.#gh.getGist(gist.id);
+        data.downloaded_at = new Date();
+        data.pending = null;
+        await this.#db.storeGist(data);
+
+        let entry = await this.getGistStems(data.id);
+        console.log(entry);
+        await this.#db.addStems(entry.id, entry.name, entry.stems);
+      }
+    })
+  }
+
+  async search(substr){
+    console.log("searching:" + substr);
+    if (substr.length == 0){ return this.renderGists(0); }
+    const stems = await this.#db.searchStem(substr);
+    const p = Promise.all(stems.map(stem => {return this.getGist(stem.id)}));
+    const gists = await p;
+    UI.renderGists(gists);
+  }
+
+
   resetGists(){
     this.#setDB("since", 0);
     this.#db.deleteDB();
@@ -213,6 +243,32 @@ class turbogist {
 
     this.resetGists();
     // TODO - add initial loading spinner div
+  }
+
+  async getGist(id){
+    return await this.#db.getGist(id);
+  }
+
+  async getGistStems(id){
+    const data = await this.getGist(id);
+    const keys = Object.keys(data.files);
+    const words = new Set;
+    keys.map(k => {
+      let content = Helpers.stemContent(data.files[k].content);
+      content.forEach(w => words.add(w));
+    })
+
+    return {id: id, name: keys[0], stems: words};
+
+    const stems = new Set;
+    words.forEach(w => {
+      for (let i = 1; i <= w.length; i++){
+        let stem = w.slice(0, i);
+        stems.add(stem)
+      }
+    })
+
+    return {id: id, name: keys[0], stems: stems};
   }
 
   logout(){
