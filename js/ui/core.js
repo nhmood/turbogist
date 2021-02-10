@@ -3,6 +3,7 @@ import * as Helpers from "../helpers.js";
 
 export const paginationSize = 10;
 
+// TODO - rename to hookClick
 export const hookButtons = (buttonMap) => {
   console.log(buttonMap);
   buttonMap.forEach(btn => {
@@ -12,6 +13,20 @@ export const hookButtons = (buttonMap) => {
     });
   });
 };
+
+
+export const hookSearch = (config) => {
+  console.log(config);
+  config.forEach(c => {
+    let els = document.querySelectorAll(`[data-hook=${c.hook}]`);
+    els.forEach(el => {
+      el.addEventListener('keyup', (e) => {
+        let search = e.target.value.toLowerCase();
+        c.function(e.target.value)
+      });
+    })
+  })
+}
 
 
 // Helper to set the URL nav path

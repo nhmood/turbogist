@@ -39,6 +39,12 @@ class turbogist {
     UI.setNav("");
     UI.hookButtons(buttonMap);
 
+
+    const searchConfig = [
+      {hook: "searchGists", function: (e) => { this.search(e) }}
+    ]
+    UI.hookSearch(searchConfig);
+
     // TODO - add back demo mode
     //// Check whether we are in demo mode or not
     //let isDemoMode = checkDemoMode();
