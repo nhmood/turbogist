@@ -115,30 +115,23 @@ class turbogist {
 
 
   async #getGistsSince(since, page = 1){
-    this.#gh.getGists(since, page).then( async (data) => {
-      if (data.gists.length > 0){
-        console.log("Storing Data");
-        console.log({data});
-        this.#db.storeGists(data.gists);
-      }
-      this.#updatePagination();
+    // Fetch paginated gists from GitHub from the specified date with
+    return this.#gh.getGists(since, page).then( async (data) => {
+      // Store the retrieved gists into indexedDB, update
+      // the pagination on the page, and render the first page gists
+      // if the current page we are on is (0) (to avoid unnecessary rerenders)
+      await this.#db.storeGists(data.gists);
+      await this.#updatePagination();
       if (page == 1){ this.renderGists(0); }
-      console.log({data});
 
-
-
-      // If there is more data available, recursively call
-      // the getGists page again with the next page
-      // On return, concatenate the current page data with the next page data
-      // so we can inspect/use _all_ gist records from the set of requests
+      // If there is more data available, recursively call getGistsSince
+      // with the fixed since paramter but incremented page
       if (data.moreAvailable){
         page += 1;
-        return this.#getGistsSince(since, page).then( more => {
-          return data.gists.concat(more)
-        })
+        return this.#getGistsSince(since, page);
       } else {
         console.log("No more gist data found");
-        return data
+        return true;
       }
     })
     .catch( e => {console.log(`Failed to get gists for since:${since}/page:${page} -> ${e}`)});
