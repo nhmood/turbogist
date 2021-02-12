@@ -330,6 +330,12 @@ class turbogist {
     const keys = Object.keys(data.files);
     const words = new Set;
     keys.map(k => {
+      // Stem the filename and add it to the stem list
+      // TODO - skip stemming and just add full filename?
+      let filename = Helpers.stemContent(k);
+      filename.forEach(w => words.add(w));
+
+      // Stem the contents of the file and add it to the stem list
       let content = Helpers.stemContent(data.files[k].content);
       content.forEach(w => words.add(w));
     })
