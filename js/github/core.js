@@ -9,10 +9,21 @@ class GitHub {
   #accessToken;
   #requestHeaders;
   #baseRequestOpts;
+  #demo = false;
   constructor(accessToken){
     this.#accessToken = accessToken;
     this.configureRequestHeaders(this.#accessToken);
     this.configureBaseRequest(this.#requestHeaders);
+  }
+
+
+  setDemo(){
+    console.log("SETTING DEMO MODE");
+    this.#demo = true;
+    this.#accessToken = "";
+    //GitHub.GIST_URL = GitHub.BASE_URL + "/gists/public";
+    this.configureBaseRequest();
+    console.log(GitHub.GIST_URL);
   }
 
   configureRequestHeaders(authToken){
@@ -24,10 +35,16 @@ class GitHub {
 
   configureBaseRequest(headers){
     this.#baseRequestOpts = {
-      headers: headers,
       cache: "no-cache",
       accept: "application/vnd.github.v3+json"
     }
+
+    // If headers are passed, merge them into the base request
+    // We need to remove the headers
+    if (headers != undefined){
+      this.#baseRequestOpts = Object.assign(this.#baseRequestOpts, {headers: headers})
+    }
+
     console.log(this.#baseRequestOpts);
     return true;
   }
@@ -71,12 +88,9 @@ class GitHub {
 
 
   #githubFetch(pageURL){
-    return fetch(pageURL, {
-      method: "GET",
-      headers: this.#requestHeaders,
-      cache: "no-cache",
-      accept: "application/vnd.github.v3+json"
-    })
+    console.log(this.#baseRequestOpts);
+
+    return fetch(pageURL, this.#baseRequestOpts)
     .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json(); })
     .catch( e => { console.log(`Failed to fetch page ${pageURL} -> ${e}`) ;})
   }

@@ -12,6 +12,7 @@ class turbogist {
   #user;
   #since;
   #getGistInProgress = false;
+  #demoMode = false;
 
 
   constructor(){
@@ -34,7 +35,8 @@ class turbogist {
     const buttonMap = [
       {hook: "updateGists", function: () => { this.updateGists() }},
       {hook: "resetGists",  function: () => { this.resetGists()  }},
-      {hook: "logout",      function: () => { this.logout()      }}
+      {hook: "logout",      function: () => { this.logout()      }},
+      {hook: "demo",        function: () => { this.demoMode()    }}
     ]
     UI.setNav("");
     UI.hookButtons(buttonMap);
@@ -44,13 +46,6 @@ class turbogist {
       {hook: "searchGists", function: (e) => { this.search(e) }}
     ]
     UI.hookSearch(searchConfig);
-
-    // TODO - add back demo mode
-    //// Check whether we are in demo mode or not
-    //let isDemoMode = checkDemoMode();
-    //if (isDemoMode){
-    //  return demoMode();
-    //}
 
 
     // TODO - move to indexedDB
@@ -74,6 +69,15 @@ class turbogist {
   }
 
 
+  async demoMode(){
+    this.#db.deleteDB();
+    UI.setUserUI("demo");
+    this.#gh.setDemo();
+    this.#demoMode = true;
+    this.#since = 0;
+    await this.#enableGistUI();
+    await this.updateGists();
+  }
 
   async updateGists(){
     if (this.#getGistInProgress){
@@ -140,6 +144,8 @@ class turbogist {
       await this.#db.storeGists(data.gists);
       await this.#updatePagination();
       if (page == 1){ this.renderGists(0); }
+
+      if (this.#demoMode){ return };
 
       // If there is more data available, recursively call getGistsSince
       // with the fixed since paramter but incremented page
