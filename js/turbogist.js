@@ -161,24 +161,79 @@ class turbogist {
   }
 
 
-  async updateDictionary(e){
-    // Walk through all gists in DB and fetch the
-    // full gist if the download_at is unset or older than
-    // the updated at of the gist
-    this.#db.walkGists("pending", async gist => {
-      console.log(gist);
-      if (gist.downloaded_at == undefined){
-        console.log(`gist:${gist.id} not downloaded`);
-        let data = await this.#gh.getGist(gist.id);
-        data.downloaded_at = new Date();
-        data.pending = null;
-        await this.#db.storeGist(data);
+  /*
+   * NOTE - regarding current approach:
+   * Not sure how to handle this using the iterator this.#db.walkGists approach
+   * Initially tried using the iterator and passing a gist handler as a parameter (gistDo)
+   * but ran into issues where awaiting on the reuslt was causing the transaction to end
+   * Additionally, I can't seem to figure out how to create a new cursor on an index
+   * from a previously specified primaryKey (not the index key)
+   *
+   * Previous attempt code below for later reference
+   *
+   *  this.#db.walkGists("pending", async gist => {
+   *    if (gist.downloaded_at == undefined){
+   *      let data = await this.#gh.getGist(gist.id);
+   *      data.downloaded_at = new Date();
+   *      data.pending = null;
+   *      await this.#db.storeGist(data);
 
-        let entry = await this.getGistStems(data.id);
-        console.log(entry);
-        await this.#db.addStems(entry.id, entry.name, entry.stems);
+   *      let entry = await this.getGistStems(data.id);
+   *      console.log(entry);
+   *      await this.#db.addStems(entry.id, entry.name, entry.stems);
+   *    }
+   *  }
+   */
+  // Walk through and update the dictionary with the entries we have
+  async updateDictionary(){
+    // Turn on the "building dictionary" ui component
+    UI.showBuildingDictionary(true);
+
+
+    // Walk through the pending entries until we are done with them
+    // We will update the entry (and therefore the index) after we
+    // process each entry so the call back to walk should return empty
+    // once we are finally done
+    while(true){
+      let record = await this.#db.walk("gists", "pending");
+      if (record == undefined){
+        console.log("No pending gists remain");
+        break;
       }
-    })
+
+      // Fetch the full Gist data (with raw contents) from
+      let gist = record.value;
+      console.log(`Fetching gist:${gist.id}`);
+      let fullGist = await this.#gh.getGist(gist.id)
+
+      if (fullGist == undefined){
+        console.warn(`Failed to fetch gist:${gist.id}`);
+        continue;
+      }
+
+      // Update the fields for the record and push back into indexedDB
+      console.log(`Setting gist:${gist.id} downloaded_at/pending`);
+      fullGist.downloaded_at = new Date();
+      fullGist.pending = null;
+
+      console.log(`Storing gist:${gist.id} into indexedDB`);
+      await this.#db.storeGist(fullGist);
+
+
+      // TODO - push this to a separate background worker
+      // TODO - can probably just pass the fullGist here
+      // Stem the contents of the file and add them to the indexedDB dictionary
+      let stemming = await this.getGistStems(fullGist.id);
+      console.log(stemming);
+      await this.#db.addStems(stemming.id, stemming.name, stemming.stems);
+
+      // Sleep for a bit
+      console.log("Sleeping for 500ms");
+      await Helpers.sleep(500);
+    }
+
+    console.log("Done building dictionary");
+    UI.showBuildingDictionary(false);
   }
 
   async search(substr){

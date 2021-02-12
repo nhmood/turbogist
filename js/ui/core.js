@@ -80,6 +80,12 @@ export function refreshState(state){
   return true;
 }
 
+export function showBuildingDictionary(state){
+  const banner = document.getElementById("dictionary_loading");
+  console.log(banner);
+  console.log(state);
+  state ? banner.classList.remove("hide") : banner.classList.add("hide");
+}
 
 
 export function updatePagination(pageBounds){

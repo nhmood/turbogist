@@ -313,6 +313,23 @@ class Database {
     })
   }
 
+
+  async walk(store, index){
+    const session = this.#idbGenerateTransaction([store], "readonly");
+    let source = session.stores[store]
+
+    if (index) {
+      source = source.index(index);
+    }
+    const request = source.openCursor();
+
+    return new Promise((resolve, reject) => {
+      request.onsuccess = (event) => { resolve(event.target.result) };
+      request.onerror   = (event) => { reject(event.target.result)  };
+    })
+  }
+
+
   async walkGists(index, gistDo){
     const session = this.#idbGenerateTransaction(["gists"], "readwrite");
     let source = session.stores.gists;
