@@ -59,15 +59,15 @@ class Database {
       let gists = session.stores.gists;
       let gistRequest = gists.clear();
       let gistDelete = new Promise((resolve, reject) => {
-        request.onsuccess = (event) => resolve(event);
-        request.onerror   = (event) => reject(event);
+        gistRequest.onsuccess = (event) => resolve(event);
+        gistRequest.onerror   = (event) => reject(event);
       });
 
       let dictionary = session.stores.dictionary;
       let dictRequest = dictionary.clear();
       let dictDelete = new Promise((resolve, reject) => {
-        request.onsuccess = (event) => resolve(event);
-        request.onerror   = (event) => reject(event);
+        dictRequest.onsuccess = (event) => resolve(event);
+        dictRequest.onerror   = (event) => reject(event);
       });
 
       return Promise.all([gistDelete, dictDelete]);
@@ -182,6 +182,16 @@ class Database {
   async #idbCountGists(transaction){
     const session = transaction || this.#idbGenerateTransaction(["gists"], "readonly");
     let request = session.stores.gists.count();
+    return new Promise((resolve, reject) => {
+      request.onsuccess = (event) => { resolve(event.target.result) };
+      request.onerror   = (event) => { reject(event.target.result)  };
+    })
+  }
+
+  async countRecords(store){
+    const session = this.#idbGenerateTransaction([store], "readonly");
+    let request = session.stores[store].count();
+
     return new Promise((resolve, reject) => {
       request.onsuccess = (event) => { resolve(event.target.result) };
       request.onerror   = (event) => { reject(event.target.result)  };
