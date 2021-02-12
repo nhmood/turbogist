@@ -55,13 +55,22 @@ class Database {
 
   deleteDB(){
     try {
-      const session = this.#idbGenerateTransaction(["gists"], "readwrite");
+      const session = this.#idbGenerateTransaction(["gists", "dictionary"], "readwrite");
       let gists = session.stores.gists;
-      let request = gists.clear();
-      return new Promise((resolve, reject) => {
+      let gistRequest = gists.clear();
+      let gistDelete = new Promise((resolve, reject) => {
         request.onsuccess = (event) => resolve(event);
         request.onerror   = (event) => reject(event);
       });
+
+      let dictionary = session.stores.dictionary;
+      let dictRequest = dictionary.clear();
+      let dictDelete = new Promise((resolve, reject) => {
+        request.onsuccess = (event) => resolve(event);
+        request.onerror   = (event) => reject(event);
+      });
+
+      return Promise.all([gistDelete, dictDelete]);
     } catch(e) {
       console.error(e);
     }
