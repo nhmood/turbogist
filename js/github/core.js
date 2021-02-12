@@ -6,35 +6,35 @@ class GitHub {
 
 
 
-  #accessToken;
-  #requestHeaders;
-  #baseRequestOpts;
-  #demo = false;
+  accessToken;
+  requestHeaders;
+  baseRequestOpts;
+  demo = false;
   constructor(accessToken){
-    this.#accessToken = accessToken;
-    this.configureRequestHeaders(this.#accessToken);
-    this.configureBaseRequest(this.#requestHeaders);
+    this.accessToken = accessToken;
+    this.configureRequestHeaders(this.accessToken);
+    this.configureBaseRequest(this.requestHeaders);
   }
 
 
   setDemo(){
     console.log("SETTING DEMO MODE");
-    this.#demo = true;
-    this.#accessToken = "";
+    this.demo = true;
+    this.accessToken = "";
     //GitHub.GIST_URL = GitHub.BASE_URL + "/gists/public";
     this.configureBaseRequest();
     console.log(GitHub.GIST_URL);
   }
 
   configureRequestHeaders(authToken){
-    this.#requestHeaders = new Headers();
-    this.#requestHeaders.set('Authorization', `token ${authToken}`);
-    console.log(this.#requestHeaders);
+    this.requestHeaders = new Headers();
+    this.requestHeaders.set('Authorization', `token ${authToken}`);
+    console.log(this.requestHeaders);
     return true;
   }
 
   configureBaseRequest(headers){
-    this.#baseRequestOpts = {
+    this.baseRequestOpts = {
       cache: "no-cache",
       accept: "application/vnd.github.v3+json"
     }
@@ -42,17 +42,17 @@ class GitHub {
     // If headers are passed, merge them into the base request
     // We need to remove the headers
     if (headers != undefined){
-      this.#baseRequestOpts = Object.assign(this.#baseRequestOpts, {headers: headers})
+      this.baseRequestOpts = Object.assign(this.baseRequestOpts, {headers: headers})
     }
 
-    console.log(this.#baseRequestOpts);
+    console.log(this.baseRequestOpts);
     return true;
   }
 
   async getUser(){
-    const data = await this.#request(GitHub.USER_URL, {
+    const data = await this.request(GitHub.USER_URL, {
       method: "GET",
-      headers: this.#requestHeaders,
+      headers: this.requestHeaders,
       cache: "no-cache"
     })
     .catch(e => { throw Error(`getUser Failed ${e}`) });
@@ -67,14 +67,14 @@ class GitHub {
     console.log({url});
 
     // Make the request to grab Gist data by since+page
-    return this.#fetchGistPage(url);
+    return this.fetchGistPage(url);
   }
 
 
 
-  #fetchGistPage(pageURL){
+  fetchGistPage(pageURL){
     console.log(pageURL);
-    return this.#githubFetch(pageURL)
+    return this.githubFetch(pageURL)
     // Format the gist data into an object that has the data + moreAvailable indicator
     .then(  d => { return {gists: d, moreAvailable: (d.length > 0)} })
   }
@@ -83,19 +83,19 @@ class GitHub {
   getGist(gistID){
     console.log(`Fetching individual Gist:${gistID}`);
     let url = GitHub.GIST_URL + "/" + gistID;
-    return this.#githubFetch(url);
+    return this.githubFetch(url);
   }
 
 
-  #githubFetch(pageURL){
-    console.log(this.#baseRequestOpts);
+  githubFetch(pageURL){
+    console.log(this.baseRequestOpts);
 
-    return fetch(pageURL, this.#baseRequestOpts)
+    return fetch(pageURL, this.baseRequestOpts)
     .then(  r => { if (!r.ok){ throw Error(r.statusText) }; return r.json(); })
     .catch( e => { console.log(`Failed to fetch page ${pageURL} -> ${e}`) ;})
   }
 
-  async #request(path, opts){
+  async request(path, opts){
     let response = await fetch(path, opts);
     if (!response.ok){ throw Error(response.statusText) };
     let payload = await response.json();

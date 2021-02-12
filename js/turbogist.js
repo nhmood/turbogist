@@ -6,13 +6,13 @@ import * as UI from "./ui/core.js"
 console.log("turbogist v1.0");
 
 class turbogist {
-  #db;
-  #gh;
-  #accessToken;
-  #user;
-  #since;
-  #getGistInProgress = false;
-  #demoMode = false;
+  db;
+  gh;
+  accessToken;
+  user;
+  since;
+  getGistInProgress = false;
+  inDemoMode = false;
 
 
   constructor(){
@@ -20,13 +20,13 @@ class turbogist {
 
 
   async setup(){
-    this.#db = new Database();
-    await this.#db.setup();
+    this.db = new Database();
+    await this.db.setup();
     await this.handleAuthInit();
 
 
-    this.#accessToken = localStorage.getItem("tgAccessToken");
-    this.#gh = new GitHub(this.#accessToken);
+    this.accessToken = localStorage.getItem("tgAccessToken");
+    this.gh = new GitHub(this.accessToken);
 
 
     // TODO - figure out why just passing the function reference
@@ -52,21 +52,21 @@ class turbogist {
 
     // TODO - move to indexedDB
     let isLoggedIn  = localStorage.getItem("tgAccessToken") != undefined;
-    isLoggedIn  ? this.#setupGist() : this.#setupLogin();
+    isLoggedIn  ? this.setupGist() : this.setupLogin();
   }
 
 
-  async #setupGist(){
-    this.#user = await this.#gh.getUser();
+  async setupGist(){
+    this.user = await this.gh.getUser();
 
     // TODO - move to indexedDB
-    this.#setDB("user", this.#user);
-    UI.setUserUI(this.#user.login);
+    this.setDB("user", this.user);
+    UI.setUserUI(this.user.login);
 
     // TODO - move to indexedDB
-    this.#since = this.#loadCache("since") || 0;
+    this.since = this.loadCache("since") || 0;
 
-    await this.#enableGistUI();
+    await this.enableGistUI();
     await this.updateGists();
   }
 
@@ -74,36 +74,36 @@ class turbogist {
   async demoMode(){
     UI.setUserUI("demo");
     localStorage.setItem("tgAccessToken", "demo");
-    this.#gh.setDemo();
-    this.#demoMode = true;
+    this.gh.setDemo();
+    this.isDemoMode = true;
 
-    await this.#enableGistUI();
+    await this.enableGistUI();
 
-    let count = await this.#db.countRecords("gists");
+    let count = await this.db.countRecords("gists");
     if ( count == 0 ){
-      this.#since = 0;
+      this.since = 0;
       await this.updateGists();
     }
   }
 
   async updateGists(){
-    if (this.#getGistInProgress){
+    if (this.getGistInProgress){
       console.log("getAllGist already in progress");
       return false;
     };
 
-    this.#getGistInProgress = true;
+    this.getGistInProgress = true;
     UI.refreshState("pending");
 
-    let since = new Date(this.#since || 0);
-    await this.#getGistsSince(since);
+    let since = new Date(this.since || 0);
+    await this.getGistsSince(since);
 
     var currentTime = new Date();
-    this.#setDB("since", currentTime);
-    this.#since = currentTime;
+    this.setDB("since", currentTime);
+    this.since = currentTime;
 
     UI.refreshState("none");
-    this.#getGistInProgress = false;
+    this.getGistInProgress = false;
 
 
     // TODO - move this to background/service worker
@@ -112,29 +112,29 @@ class turbogist {
 
 
 
-  async #enableGistUI(){
+  async enableGistUI(){
     UI.toggleUI("gists");
 
     // If we already have available data (since is set), update the
     // pagination and render the first page
-    if (this.#since != 0){
-      await this.#updatePagination();
+    if (this.since != 0){
+      await this.updatePagination();
       await this.renderGists(0);
     }
   }
 
 
 
-  async #updatePagination(){
-    const pageBounds = await this.#db.getPageBounds(UI.paginationSize);
+  async updatePagination(){
+    const pageBounds = await this.db.getPageBounds(UI.paginationSize);
     UI.updatePagination(pageBounds);
     return true;
   }
 
   async renderGists(page){
-    const gistPage = this.#db.pageBounds[page];
+    const gistPage = this.db.pageBounds[page];
     if (gistPage == undefined){ return };
-    const gists = await this.#db.getGistPage(gistPage, UI.paginationSize);
+    const gists = await this.db.getGistPage(gistPage, UI.paginationSize);
 
     UI.renderGists(gists);
 
@@ -142,23 +142,23 @@ class turbogist {
   }
 
 
-  async #getGistsSince(since, page = 1){
+  async getGistsSince(since, page = 1){
     // Fetch paginated gists from GitHub from the specified date with
-    return this.#gh.getGists(since, page).then( async (data) => {
+    return this.gh.getGists(since, page).then( async (data) => {
       // Store the retrieved gists into indexedDB, update
       // the pagination on the page, and render the first page gists
       // if the current page we are on is (0) (to avoid unnecessary rerenders)
-      await this.#db.storeGists(data.gists);
-      await this.#updatePagination();
+      await this.db.storeGists(data.gists);
+      await this.updatePagination();
       if (page == 1){ this.renderGists(0); }
 
-      if (this.#demoMode){ return };
+      if (this.isDemoMode){ return };
 
       // If there is more data available, recursively call getGistsSince
       // with the fixed since paramter but incremented page
       if (data.moreAvailable){
         page += 1;
-        return this.#getGistsSince(since, page);
+        return this.getGistsSince(since, page);
       } else {
         console.log("No more gist data found");
         return true;
@@ -170,7 +170,7 @@ class turbogist {
 
   /*
    * NOTE - regarding current approach:
-   * Not sure how to handle this using the iterator this.#db.walkGists approach
+   * Not sure how to handle this using the iterator this.db.walkGists approach
    * Initially tried using the iterator and passing a gist handler as a parameter (gistDo)
    * but ran into issues where awaiting on the reuslt was causing the transaction to end
    * Additionally, I can't seem to figure out how to create a new cursor on an index
@@ -178,16 +178,16 @@ class turbogist {
    *
    * Previous attempt code below for later reference
    *
-   *  this.#db.walkGists("pending", async gist => {
+   *  this.db.walkGists("pending", async gist => {
    *    if (gist.downloaded_at == undefined){
-   *      let data = await this.#gh.getGist(gist.id);
+   *      let data = await this.gh.getGist(gist.id);
    *      data.downloaded_at = new Date();
    *      data.pending = null;
-   *      await this.#db.storeGist(data);
+   *      await this.db.storeGist(data);
 
    *      let entry = await this.getGistStems(data.id);
    *      console.log(entry);
-   *      await this.#db.addStems(entry.id, entry.name, entry.stems);
+   *      await this.db.addStems(entry.id, entry.name, entry.stems);
    *    }
    *  }
    */
@@ -202,16 +202,17 @@ class turbogist {
     // process each entry so the call back to walk should return empty
     // once we are finally done
     while(true){
-      let record = await this.#db.walk("gists", "pending");
+      let record = await this.db.walk("gists", "pending");
       if (record == undefined){
         console.log("No pending gists remain");
+        Helpers.sleep(500);
         break;
       }
 
       // Fetch the full Gist data (with raw contents) from
       let gist = record.value;
       console.log(`Fetching gist:${gist.id}`);
-      let fullGist = await this.#gh.getGist(gist.id)
+      let fullGist = await this.gh.getGist(gist.id)
 
       if (fullGist == undefined){
         console.warn(`Failed to fetch gist:${gist.id}`);
@@ -224,7 +225,7 @@ class turbogist {
       fullGist.pending = null;
 
       console.log(`Storing gist:${gist.id} into indexedDB`);
-      await this.#db.storeGist(fullGist);
+      await this.db.storeGist(fullGist);
 
 
       // TODO - push this to a separate background worker
@@ -232,7 +233,7 @@ class turbogist {
       // Stem the contents of the file and add them to the indexedDB dictionary
       let stemming = await this.getGistStems(fullGist.id);
       console.log(stemming);
-      await this.#db.addStems(stemming.id, stemming.name, stemming.stems);
+      await this.db.addStems(stemming.id, stemming.name, stemming.stems);
 
       // Sleep for a bit
       console.log("Sleeping for 500ms");
@@ -243,40 +244,50 @@ class turbogist {
     UI.showBuildingDictionary(false);
   }
 
+  async addDictionary(gist){
+    console.log(gist);
+  }
+
   async search(substr){
     console.log("searching:" + substr);
     if (substr.length == 0){ return this.renderGists(0); }
-    const stems = await this.#db.searchStem(substr);
-    const p = Promise.all(stems.map(stem => {return this.getGist(stem.id)}));
+    const stems = await this.db.searchStem(substr);
+    const p = Promise.all(stems.map(stem => {console.log(stem); return this.getGist(stem.id)}));
     const gists = await p;
     UI.renderGists(gists);
   }
 
+  async getSet(id, data){
+    const gist = await this.getGist(id);
+    const newGist = Object.assign(gist, data);
+    this.db.storeGist(newGist);
+  }
+
 
   resetGists(){
-    this.#setDB("since", 0);
-    this.#db.deleteDB();
+    this.setDB("since", 0);
+    this.db.deleteDB();
     this.setup();
   }
 
 
-  async #setupLogin(){
+  async setupLogin(){
     UI.toggleUI("login");
   }
 
 
   // TODO - move to indexedDB
-  #setDB(key, value){
-    let lsKey = this.#getLSKey(key);
+  setDB(key, value){
+    let lsKey = this.getLSKey(key);
     localStorage.setItem(lsKey, JSON.stringify(value));
   }
 
-  #getLSKey(key){
+  getLSKey(key){
     return `tg${Helpers.capitalize(key)}`;
   }
 
-  #loadCache(key){
-    let lsKey = this.#getLSKey(key);
+  loadCache(key){
+    let lsKey = this.getLSKey(key);
     console.log(`Attempting to load ${key} from localStorage cache`);
     let entry = localStorage.getItem(lsKey);
     if (entry == undefined){
@@ -315,14 +326,14 @@ class turbogist {
     // If the auth was successful, store the access token then initialize turbogist
     // TODO - move to indexedDB
     localStorage.setItem("tgAccessToken", auth.access_token);
-    this.#accessToken = auth.access_token;
+    this.accessToken = auth.access_token;
 
     this.resetGists();
     // TODO - add initial loading spinner div
   }
 
   async getGist(id){
-    return await this.#db.getGist(id);
+    return await this.db.getGist(id);
   }
 
   async getGistStems(id){

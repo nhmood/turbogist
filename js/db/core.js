@@ -1,7 +1,7 @@
 class Database {
-  #version = 1;
-  #dbName = "turbogist";
-  #idb;
+  version = 1;
+  dbName = "turbogist";
+  idb;
 
   pageBounds = [];
 
@@ -11,29 +11,29 @@ class Database {
 
   async setup(){
     let p = new Promise((resolve, reject) => {
-      const request = window.indexedDB.open(this.#dbName, this.#version);
-      request.onerror = (e) => { this.#setupError(event, reject); }
-      request.onsuccess = (e) => { this.#setupSuccess(event, resolve); }
-      request.onupgradeneeded = this.#upgradeDB;
+      const request = window.indexedDB.open(this.dbName, this.version);
+      request.onerror   = (event) => { this.setupError(event, reject); }
+      request.onsuccess = (event) => { this.setupSuccess(event, resolve); }
+      request.onupgradeneeded = this.upgradeDB;
     });
 
     await p;
     return this;
   }
 
-  #setupSuccess(event, resolve){
+  setupSuccess(event, resolve){
     console.log("indexedDB setup successful");
-    this.#idb = event.target.result;
-    resolve(this.#idb);
+    this.idb = event.target.result;
+    resolve(this.idb);
   }
 
-  #setupError(event, reject){
+  setupError(event, reject){
     console.error("indexedDB setup failed");
     console.error(event);
     reject(event);
   }
 
-  #upgradeDB(event){
+  upgradeDB(event){
     console.log("indexedDB database upgrade required");
     const db = event.target.result;
 
@@ -41,7 +41,7 @@ class Database {
   }
 
   static createDB(idb){
-    idb = idb || this.#idb;
+    idb = idb || this.idb;
     const gistStore = idb.createObjectStore("gists", {autoIncrement: false, keyPath: "id"});
     gistStore.createIndex("created_at", "created_at", { unique: false });
     gistStore.createIndex("updated_at", "updated_at", { unique: false });
@@ -55,7 +55,7 @@ class Database {
 
   deleteDB(){
     try {
-      const session = this.#idbGenerateTransaction(["gists", "dictionary"], "readwrite");
+      const session = this.idbGenerateTransaction(["gists", "dictionary"], "readwrite");
       let gists = session.stores.gists;
       let gistRequest = gists.clear();
       let gistDelete = new Promise((resolve, reject) => {
@@ -80,8 +80,8 @@ class Database {
 
 
   //let storeMap = new Map(stores.map(s => [s, transaction.objectStore(s)]));
-  #idbGenerateTransaction(stores, mode){
-    const transaction = this.#idb.transaction(stores, mode);
+  idbGenerateTransaction(stores, mode){
+    const transaction = this.idb.transaction(stores, mode);
     const storeMap = stores.reduce((map, store) => {
       map[store] = transaction.objectStore(store);
       return map;
@@ -95,7 +95,7 @@ class Database {
 
   async getPageBounds(pageSize, transaction){
     // Create or use the provided session and pull the "updated_at" index
-    const session = transaction || this.#idbGenerateTransaction(["gists"], "readonly");
+    const session = transaction || this.idbGenerateTransaction(["gists"], "readonly");
     const index = session.stores.gists.index("updated_at");
 
     // Open a key cursor in the reverse direction (latest updated first)
@@ -138,7 +138,7 @@ class Database {
 
   async getGistPage(start, pageSize, transaction){
     // Create or use the provided session and pull the "updated_at" index
-    const session = transaction || this.#idbGenerateTransaction(["gists"], "readonly");
+    const session = transaction || this.idbGenerateTransaction(["gists"], "readonly");
     const index = session.stores.gists.index("updated_at");
 
     // Open a key cursor in the reverse direction (latest updated first)
@@ -179,8 +179,8 @@ class Database {
   }
 
 
-  async #idbCountGists(transaction){
-    const session = transaction || this.#idbGenerateTransaction(["gists"], "readonly");
+  async idbCountGists(transaction){
+    const session = transaction || this.idbGenerateTransaction(["gists"], "readonly");
     let request = session.stores.gists.count();
     return new Promise((resolve, reject) => {
       request.onsuccess = (event) => { resolve(event.target.result) };
@@ -189,7 +189,7 @@ class Database {
   }
 
   async countRecords(store){
-    const session = this.#idbGenerateTransaction([store], "readonly");
+    const session = this.idbGenerateTransaction([store], "readonly");
     let request = session.stores[store].count();
 
     return new Promise((resolve, reject) => {
@@ -200,7 +200,7 @@ class Database {
 
 
   storeGists(gists){
-    const session = this.#idbGenerateTransaction(["gists"], "readwrite");
+    const session = this.idbGenerateTransaction(["gists"], "readwrite");
     const stores = gists.map(gist => {
       // When we batch import gists (with storeGists, compared to storeGist)
       // set the pending flag to the current timestamp
@@ -212,7 +212,7 @@ class Database {
 
 
   storeGist(gist, transaction){
-    const session = transaction || this.#idbGenerateTransaction(["gists"], "readwrite");
+    const session = transaction || this.idbGenerateTransaction(["gists"], "readwrite");
     const gists = session.stores.gists;
 
 
@@ -224,7 +224,7 @@ class Database {
   }
 
   async addStems(id, name, stems, transaction){
-    const session = transaction || this.#idbGenerateTransaction(["dictionary"], "readwrite");
+    const session = transaction || this.idbGenerateTransaction(["dictionary"], "readwrite");
     const dictionary = session.stores.dictionary;
 
     stems = Array.from(stems);
@@ -235,7 +235,7 @@ class Database {
   }
 
   async addStem(stem, transaction){
-    const session = transaction || this.#idbGenerateTransaction(["dictionary"], "readwrite");
+    const session = transaction || this.idbGenerateTransaction(["dictionary"], "readwrite");
     const dictionary = session.stores.dictionary;
 
     const request = dictionary.put(stem)
@@ -246,7 +246,7 @@ class Database {
   }
 
   async searchStem(substr, transaction){
-    const session = transaction || this.#idbGenerateTransaction(["dictionary"], "readwrite");
+    const session = transaction || this.idbGenerateTransaction(["dictionary"], "readwrite");
     const dictionary = session.stores.dictionary;
 
     // For the search, we will use the substr as the lower bound and set the key range
@@ -303,7 +303,7 @@ class Database {
 
 
   async getGist(id, transaction){
-    const session = transaction || this.#idbGenerateTransaction(["gists"], "readonly");
+    const session = transaction || this.idbGenerateTransaction(["gists"], "readonly");
     const gists = session.stores.gists;
     const request = gists.get(id);
 
@@ -315,7 +315,7 @@ class Database {
 
 
   async walk(store, index){
-    const session = this.#idbGenerateTransaction([store], "readonly");
+    const session = this.idbGenerateTransaction([store], "readonly");
     let source = session.stores[store]
 
     if (index) {
@@ -331,7 +331,7 @@ class Database {
 
 
   async walkGists(index, gistDo){
-    const session = this.#idbGenerateTransaction(["gists"], "readwrite");
+    const session = this.idbGenerateTransaction(["gists"], "readwrite");
     let source = session.stores.gists;
 
     if (index){
