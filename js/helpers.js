@@ -8,6 +8,13 @@ export function stemContent(content){
   return stemmed;
 }
 
+
+
+// Sleep helper
+export function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // String capitalize
 export function capitalize(string){
   return string[0].toUpperCase() + string.slice(1);
