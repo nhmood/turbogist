@@ -258,7 +258,7 @@ class Database {
     // Open a cursor and walk through all the entries that we find
     // TODO - we may need to paginate these results
     const request = dictionary.openCursor(keyRange)
-    const gists = [];
+    const gists = {};
 
     // Wrap the cursor in a Promise for easy handling
     const walk = new Promise((resolve, reject) => {
@@ -269,7 +269,9 @@ class Database {
         // we should add it to the list and keep paging
         let cursor = event.target.result;
         if (cursor != undefined){
-          gists.push(cursor.value);
+          // Store in an object with the gist ID as the key to dedup
+          // the results
+          gists[cursor.value.id] = cursor.value;
           cursor.continue();
 
         // If the cursor does not find any data, we should resolve
@@ -289,7 +291,14 @@ class Database {
     // Wait on the promise to complete (finish paging)
     // and return the events we have collected
     await walk;
-    return gists;
+
+    // Map the results into an array now that they are deduped
+    let keys = Object.keys(gists);
+    let gistArray = [];
+    for (let i = 0; i < keys.length; i++){
+      gistArray.push( gists[ keys[i] ] );
+    }
+    return gistArray;
   }
 
 
