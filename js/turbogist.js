@@ -47,6 +47,8 @@ class turbogist {
     ]
     UI.hookSearch(searchConfig);
 
+    const authToken = localStorage.getItem("tgAccessToken");
+    if (authToken == "demo"){ return this.demoMode() }
 
     // TODO - move to indexedDB
     let isLoggedIn  = localStorage.getItem("tgAccessToken") != undefined;
@@ -70,13 +72,18 @@ class turbogist {
 
 
   async demoMode(){
-    this.#db.deleteDB();
     UI.setUserUI("demo");
+    localStorage.setItem("tgAccessToken", "demo");
     this.#gh.setDemo();
     this.#demoMode = true;
-    this.#since = 0;
+
     await this.#enableGistUI();
-    await this.updateGists();
+
+    let count = await this.#db.countRecords("gists");
+    if ( count == 0 ){
+      this.#since = 0;
+      await this.updateGists();
+    }
   }
 
   async updateGists(){
