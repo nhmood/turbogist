@@ -243,9 +243,11 @@ class turbogist {
 
     // Parse the authData and depending on the state handle success/failure
     const auth = JSON.parse(authData);
-    if (auth.state != "ok"){
-      console.error(`GitHub User Authorization failed -> ${auth}`);
+    if (auth.state != "ok" || auth.access_token == undefined){
+      console.error(`GitHub User Authorization failed`);
+      console.error(auth);
       Helpers.show("login_error");
+      return false;
     }
 
     // If the auth was successful, store the access token then initialize turbogist
