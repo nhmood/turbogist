@@ -6,16 +6,14 @@ import * as UI from "./ui/core.js"
 console.log("turbogist v1.0");
 
 class turbogist {
-  db;
-  gh;
-  accessToken;
-  user;
-  since;
-  getGistInProgress = false;
-  inDemoMode = false;
-
-
   constructor(){
+    this.db = undefined;
+    this.gh = undefined;
+    this.accessToken = undefined;
+    this.user = undefined;
+    this.since = undefined;
+    this.getGistInProgress = false;
+    this.inDemoMode = false;
   }
 
 
@@ -142,7 +140,8 @@ class turbogist {
   }
 
 
-  async getGistsSince(since, page = 1){
+  async getGistsSince(since, page){
+    if (page == undefined){ page = 1 };
     // Fetch paginated gists from GitHub from the specified date with
     return this.gh.getGists(since, page).then( async (data) => {
       // Store the retrieved gists into indexedDB, update

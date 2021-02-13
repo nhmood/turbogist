@@ -1,12 +1,11 @@
 class Database {
-  version = 1;
-  dbName = "turbogist";
-  idb;
-
-  pageBounds = [];
-
   constructor(){
     console.log("Setting up turbogist indexedDB");
+    this.version = 1;
+    this.dbName = "turbogist";
+    this.idb = undefined;
+
+    this.pageBounds = [];
   }
 
   async setup(){

@@ -1,17 +1,17 @@
 class GitHub {
-  static BASE_URL = "https://api.github.com";
-  static USER_URL = this.BASE_URL + "/user";
-  static GIST_URL = this.BASE_URL + "/gists";
-  static PAGINATION = 10;
+  static get BASE_URL() { return "https://api.github.com";}
+  static get USER_URL() { return this.BASE_URL + "/user";}
+  static get GIST_URL() { return this.BASE_URL + "/gists";}
+  static get PAGINATION() { return 10;}
 
 
 
-  accessToken;
-  requestHeaders;
-  baseRequestOpts;
-  demo = false;
   constructor(accessToken){
     this.accessToken = accessToken;
+    this.requestHeaders = undefined;
+    this.baseRequestOpts = undefined;
+    this.demo = false;
+
     this.configureRequestHeaders(this.accessToken);
     this.configureBaseRequest(this.requestHeaders);
   }
@@ -62,6 +62,7 @@ class GitHub {
 
 
   getGists(since, page = 1){
+    if (page == undefined){ page = 1; }
     const pageURL = GitHub.GIST_URL + "?since=" + since.toISOString();
     const url     = pageURL + "&page=" + page;
     console.log({url});
