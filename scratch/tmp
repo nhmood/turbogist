@@ -1,0 +1,30 @@
+
+
+
+//function fetchGistContent(gist){
+//  let files = Object.keys(gist.files);
+//  files.forEach(key => {
+//    let file = gist.files[key];
+//    url = GH_GIST_URL + "/" + gist.id
+//    githubFetch(url).then(content => {
+//      console.log(content);
+//      return content.json();
+//    })
+//      .then(e => {console.log(e); dataIndex(content.)});
+//  })
+//}
+
+//  data.forEach(gist => {
+//    fetchGist(gist.id).then(gistData => {
+//      console.log(gistData);
+//      let files = Object.keys(gistData.files);
+//      files.forEach(filename => {
+//        let file = gistData.files[filename];
+//      })
+//    })
+//  })
+//
+//function dataIndex(content){
+//  console.log(content.split(" "));
+//}
+
